@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "ofw": {
+      "command": "npx",
+      "args": ["-y", "ofw-mcp"],
+      "env": {
+        "OFW_USERNAME": "${OFW_USERNAME}",
+        "OFW_PASSWORD": "${OFW_PASSWORD}"
+      }
+    }
+  }
+}

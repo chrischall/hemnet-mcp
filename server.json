@@ -1,0 +1,41 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.chrischall/ofw-mcp",
+  "description": "OurFamilyWizard co-parenting for Claude — messages, calendar, expenses, and journal",
+  "repository": {
+    "url": "https://github.com/chrischall/ofw-mcp",
+    "source": "github"
+  },
+  "version": "2.4.4",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "ofw-mcp",
+      "version": "2.4.4",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "OFW_USERNAME",
+          "description": "Your OurFamilyWizard login email address. Optional — if omitted, the server falls back to the fetchproxy browser extension (requires being signed in to ourfamilywizard.com).",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "OFW_PASSWORD",
+          "description": "Your OurFamilyWizard password. Optional — see OFW_USERNAME.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "OFW_WRITE_MODE",
+          "description": "Write-tool gate: \"none\" registers no write tools; \"drafts\" registers draft-level writes only (save/delete drafts, upload attachments); \"all\" registers everything (default). Unrecognized values fail closed to \"none\".",
+          "isRequired": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}
