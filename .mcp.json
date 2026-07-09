@@ -1,12 +1,8 @@
 {
   "mcpServers": {
-    "ofw": {
+    "hemnet": {
       "command": "npx",
-      "args": ["-y", "ofw-mcp"],
-      "env": {
-        "OFW_USERNAME": "${OFW_USERNAME}",
-        "OFW_PASSWORD": "${OFW_PASSWORD}"
-      }
+      "args": ["-y", "hemnet-mcp"]
     }
   }
 }

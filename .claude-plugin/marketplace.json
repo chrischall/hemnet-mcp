@@ -5,28 +5,29 @@
     "email": "chris.c.hall@gmail.com"
   },
   "metadata": {
-    "description": "OurFamilyWizard tools for Claude Code",
-    "version": "2.4.4"
+    "description": "Hemnet.se real estate tools for Claude Code",
+    "version": "0.1.0"
   },
   "plugins": [
     {
-      "name": "ofw",
-      "displayName": "OurFamilyWizard",
+      "name": "hemnet",
+      "displayName": "Hemnet",
       "source": "./",
-      "description": "OurFamilyWizard co-parenting tools for Claude — messages, calendar, expenses, and journal via MCP",
-      "version": "2.4.4",
+      "description": "Hemnet.se real estate tools for Claude — search, sold prices, listings, and market stats via MCP",
+      "version": "0.1.0",
       "author": {
         "name": "Chris Chall"
       },
-      "homepage": "https://github.com/chrischall/ofw-mcp",
-      "repository": "https://github.com/chrischall/ofw-mcp",
+      "homepage": "https://github.com/chrischall/hemnet-mcp",
+      "repository": "https://github.com/chrischall/hemnet-mcp",
       "license": "MIT",
       "keywords": [
-        "ofw",
-        "coparenting",
-        "ourFamilyWizard",
-        "mcp",
-        "family"
+        "hemnet",
+        "real-estate",
+        "sweden",
+        "property",
+        "bostad",
+        "mcp"
       ],
       "category": "productivity"
     }

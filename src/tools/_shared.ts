@@ -1,129 +1,110 @@
-import { expandPath as expandPathUtil, rawTextResult, textResult } from '@chrischall/mcp-utils';
+/**
+ * Shared tool plumbing: the search-filter zod shape + input builder used
+ * by `hemnet_search_listings`, `hemnet_search_sold`, and the
+ * search-fallback rung of `hemnet_get_by_address`.
+ *
+ * Hemnet's search takes numeric `locationIds` (never a place name), so
+ * every search tool accepts EITHER an explicit `location_ids` array OR a
+ * free-text `location` that we resolve to its top autocomplete hit. The
+ * builder centralises that resolution + the filter mapping so the three
+ * call sites stay consistent.
+ */
 import { z } from 'zod';
-import type { Recipient } from '../cache.js';
-import type { OFWClient } from '../client.js';
-import { parseLenient } from '@chrischall/mcp-utils';
+import { McpToolError } from '@chrischall/mcp-utils';
+import type { HemnetClient } from '../client.js';
+import {
+  HOUSING_FORM_GROUPS,
+  SORT_OPTIONS,
+  type HemnetSearchInput,
+} from '../graphql.js';
 
-// Pretty-printed JSON tool result. Thin wrapper over @chrischall/mcp-utils'
-// `textResult` so the rest of the codebase keeps the local name.
-export const jsonResponse = textResult;
+/** The reusable zod raw-shape for search filters. */
+export const searchInputShape = {
+  location_ids: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'Numeric Hemnet location ids (from hemnet_autocomplete_location). Provide this OR `location`.',
+    ),
+  location: z
+    .string()
+    .optional()
+    .describe(
+      'Free-text place name (e.g. "Vasastan", "Göteborg") resolved to its top Hemnet location. Ignored when `location_ids` is set.',
+    ),
+  price_min: z.number().int().nonnegative().optional().describe('SEK'),
+  price_max: z.number().int().nonnegative().optional().describe('SEK'),
+  rooms_min: z.number().positive().optional(),
+  rooms_max: z.number().positive().optional(),
+  living_area_min: z.number().positive().optional().describe('m²'),
+  living_area_max: z.number().positive().optional().describe('m²'),
+  housing_form_groups: z
+    .array(z.enum(HOUSING_FORM_GROUPS))
+    .optional()
+    .describe(
+      'Property-type groups: HOUSES (villa), APARTMENTS (lägenhet/bostadsrätt), ROW_HOUSES (radhus/parhus), VACATION_HOMES (fritidshus), PLOTS (tomt), OTHERS.',
+    ),
+  keywords: z
+    .string()
+    .optional()
+    .describe('Free-text keyword filter (e.g. "sjönära", "balkong").'),
+  sort: z.enum(SORT_OPTIONS).optional().describe('NEWEST (default) or OLDEST.'),
+  limit: z.number().int().min(1).max(50).optional().describe('Default 25, max 50.'),
+  offset: z.number().int().nonnegative().optional().describe('Pagination offset.'),
+};
 
-// Raw-string tool result. Wrapper over @chrischall/mcp-utils' `rawTextResult`.
-export const textResponse = rawTextResult;
-
-// OFW API shape for `recipients[]` on message/draft list and detail
-// responses. Used wherever we validate the response of a `/pub/v3/messages*`
-// call. Loose: unknown keys pass through (and survive into cached listData).
-export const ApiRecipientSchema = z.looseObject({
-  user: z.looseObject({ id: z.number().optional(), name: z.string().optional() }).optional(),
-  viewed: z.looseObject({ dateTime: z.string() }).nullable().optional(),
-});
-export type ApiRecipient = z.infer<typeof ApiRecipientSchema>;
-
-// Translates OFW API recipient shape into the cache's normalized Recipient.
-// Used wherever we surface or persist recipients (sync, get_message, send,
-// save_draft) — all five call sites had near-identical inline mappings.
-export function mapRecipients(items: ApiRecipient[] | undefined | null): Recipient[] {
-  return (items ?? []).map((r) => ({
-    userId: r.user?.id ?? 0,
-    name: r.user?.name ?? '',
-    viewedAt: r.viewed?.dateTime ?? null,
-  }));
+/** Parsed args from {@link searchInputShape}. */
+export interface SearchArgs {
+  location_ids?: string[];
+  location?: string;
+  price_min?: number;
+  price_max?: number;
+  rooms_min?: number;
+  rooms_max?: number;
+  living_area_min?: number;
+  living_area_max?: number;
+  housing_form_groups?: HemnetSearchInput['housingFormGroups'];
+  keywords?: string;
+  sort?: 'NEWEST' | 'OLDEST';
+  limit?: number;
+  offset?: number;
 }
 
-// Expand a user-provided path: ~ → home, relative → absolute. Re-exports
-// @chrischall/mcp-utils' `expandPath`.
-export const expandPath = expandPathUtil;
-
 /**
- * Best-effort check that OFW actually persisted what we posted. OFW's
- * draft-update path is known to silently no-op while echoing success in the
- * POST response, so callers re-GET the detail and compare it to what was
- * sent. Containment (not equality) because OFW legitimately transforms
- * content — replies get the original message appended to the body
- * (includeOriginal) and may get a subject prefix. Returns a WARNING string
- * when the persisted content can't be confirmed to contain what was sent,
- * else null.
+ * Resolve the caller's location into `locationIds` and map the filter
+ * args onto the GraphQL search input. Throws a clean argument error when
+ * no location was given or a free-text name resolves to nothing.
  */
-export function verifyWriteLanded(
-  kind: 'message' | 'draft',
-  sent: { subject: string; body: string },
-  persisted: { subject?: string; body?: string },
-): string | null {
-  const mismatches: string[] = [];
-  if (typeof persisted.subject !== 'string' || !persisted.subject.includes(sent.subject)) {
-    mismatches.push('subject');
+export async function buildSearchInput(
+  client: HemnetClient,
+  args: SearchArgs,
+): Promise<HemnetSearchInput> {
+  let locationIds = args.location_ids;
+  if ((!locationIds || locationIds.length === 0) && args.location) {
+    const hits = await client.autocompleteLocations(args.location, 1);
+    const top = hits[0];
+    if (!top) {
+      throw new McpToolError(
+        `No Hemnet location matched "${args.location}". Try hemnet_autocomplete_location to find a location id.`,
+      );
+    }
+    locationIds = [top.locationId];
   }
-  if (typeof persisted.body !== 'string' || !persisted.body.includes(sent.body)) {
-    mismatches.push('body');
+  if (!locationIds || locationIds.length === 0) {
+    throw new McpToolError(
+      'Provide a location: either `location_ids` (from hemnet_autocomplete_location) or a free-text `location`.',
+    );
   }
-  if (mismatches.length === 0) return null;
-  return `WARNING: the ${kind} re-fetched from OFW does not contain the ${mismatches.join(' and ')} that was posted — OFW may have silently dropped or altered the write. Verify the ${kind} on ourfamilywizard.com before relying on it.`;
-}
 
-// POST /pub/v3/messages response: minimal, `{entityId: <id>}` or legacy
-// `{id: <id>}`, sometimes an empty body (→ null). Validated STRICT: a
-// mistyped id (e.g. entityId as a string) must throw rather than silently
-// degrade into the "unconfirmed send" path when the write actually landed.
-// Absence of both ids stays legal — callers handle it with a WARNING.
-const PostMessagesResponseSchema = z.looseObject({
-  id: z.number().optional(),
-  entityId: z.number().optional(),
-}).nullable();
-
-/**
- * POST a payload to /pub/v3/messages, then immediately GET the detail
- * endpoint for the resulting message id. This is the only correct way to
- * populate the cache after `ofw_send_message` or `ofw_save_draft`:
- *
- *  - OFW's POST response is minimal (typically just `{entityId: <id>}`
- *    or sometimes legacy `{id: <id>}`), so we can't build a full row
- *    from it directly.
- *  - Worse, on draft updates OFW returns the same success shape even
- *    when the server silently no-ops, so the GET is also how we verify
- *    the write landed (callers compare detail.body to args.body).
- *
- * Both responses are validated STRICT against `detailSchema` / the POST
- * schema (this is the write-verification boundary — issue #83); `ctx`
- * names the calling tool in the error message.
- *
- * Returns a discriminated union so callers can narrow with
- * `if (result.id !== null)`. When id is null (no id field in the
- * response — never observed in production, but defensive), `raw`
- * carries the POST response so the caller can still surface it.
- *
- * The generic is parametrized on the schema's OUTPUT type `T`
- * (`detailSchema: z.ZodType<T>`, `detail: T`) rather than on the schema
- * type itself. This mirrors `parseLenient`'s own signature
- * (`<T>(schema: ZodType<T>, …): T`) exactly, so `T` is inferred straight
- * from the schema and flows into the return type with no `as` cast — the
- * compiler verifies that `detail` matches `detailSchema`'s output. (A
- * `<S extends z.ZodType>` constraint would widen the output to `unknown`
- * and force a cast at this call site.)
- */
-export async function postMessageAndRefetch<T>(
-  client: OFWClient,
-  payload: unknown,
-  detailSchema: z.ZodType<T>,
-  ctx: string,
-): Promise<
-  | { id: number; detail: T; raw: unknown }
-  | { id: null; detail: null; raw: unknown }
-> {
-  const raw = parseLenient(
-    PostMessagesResponseSchema,
-    await client.request('POST', '/pub/v3/messages', payload),
-    { label: 'ofw-mcp', context: `POST /pub/v3/messages (${ctx})`, mode: 'strict' },
-  );
-  const id =
-    typeof raw?.id === 'number' ? raw.id
-    : typeof raw?.entityId === 'number' ? raw.entityId
-    : null;
-  if (id === null) return { id: null, detail: null, raw };
-  const detail = parseLenient(
-    detailSchema,
-    await client.request('GET', `/pub/v3/messages/${id}`),
-    { label: 'ofw-mcp', context: `GET /pub/v3/messages/{id} (${ctx})`, mode: 'strict' },
-  );
-  return { id, detail, raw };
+  const input: HemnetSearchInput = { locationIds };
+  if (args.price_min != null) input.priceMin = args.price_min;
+  if (args.price_max != null) input.priceMax = args.price_max;
+  if (args.rooms_min != null) input.roomsMin = args.rooms_min;
+  if (args.rooms_max != null) input.roomsMax = args.rooms_max;
+  if (args.living_area_min != null) input.livingAreaMin = args.living_area_min;
+  if (args.living_area_max != null) input.livingAreaMax = args.living_area_max;
+  if (args.housing_form_groups != null)
+    input.housingFormGroups = args.housing_form_groups;
+  if (args.keywords != null) input.keywords = args.keywords;
+  return input;
 }

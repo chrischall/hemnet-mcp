@@ -1,10 +1,10 @@
 {
   "$schema": "https://raw.githubusercontent.com/anthropics/dxt/main/dist/mcpb-manifest.schema.json",
   "manifest_version": "0.3",
-  "name": "ofw-mcp",
-  "display_name": "OurFamilyWizard",
-  "version": "2.4.4",
-  "description": "OurFamilyWizard co-parenting tools for Claude — messages, calendar, expenses, and journal",
+  "name": "hemnet-mcp",
+  "display_name": "Hemnet",
+  "version": "0.1.0",
+  "description": "Hemnet.se real estate tools for Claude — search, sold prices, listings, and market stats",
   "author": {
     "name": "Chris Chall",
     "email": "chris.c.hall@gmail.com",
@@ -12,19 +12,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/chrischall/ofw-mcp"
+    "url": "https://github.com/chrischall/hemnet-mcp"
   },
-  "homepage": "https://github.com/chrischall/ofw-mcp",
-  "support": "https://github.com/chrischall/ofw-mcp/issues",
+  "homepage": "https://github.com/chrischall/hemnet-mcp",
+  "support": "https://github.com/chrischall/hemnet-mcp/issues",
   "license": "MIT",
   "keywords": [
-    "ofw",
-    "coparenting",
-    "ourFamilyWizard",
-    "family",
-    "messages",
-    "calendar",
-    "expenses"
+    "hemnet",
+    "real-estate",
+    "sweden",
+    "property",
+    "bostad",
+    "slutpriser"
   ],
   "server": {
     "type": "node",
@@ -33,148 +32,63 @@
       "command": "node",
       "args": [
         "${__dirname}/dist/bundle.js"
-      ],
-      "env": {
-        "OFW_USERNAME": "${user_config.ofw_username}",
-        "OFW_PASSWORD": "${user_config.ofw_password}",
-        "OFW_INLINE_ATTACHMENTS": "${user_config.ofw_inline_attachments}",
-        "OFW_ATTACHMENTS_DIR": "${user_config.ofw_attachments_dir}",
-        "OFW_WRITE_MODE": "${user_config.ofw_write_mode}"
-      }
-    }
-  },
-  "user_config": {
-    "ofw_username": {
-      "type": "string",
-      "title": "OFW Email",
-      "description": "Your OurFamilyWizard login email address. Optional — if omitted, the server falls back to the fetchproxy browser extension (requires being signed in to ourfamilywizard.com in your browser).",
-      "required": false
-    },
-    "ofw_password": {
-      "type": "string",
-      "title": "OFW Password",
-      "description": "Your OurFamilyWizard password. Optional — see ofw_username.",
-      "required": false,
-      "sensitive": true
-    },
-    "ofw_inline_attachments": {
-      "type": "boolean",
-      "title": "Return attachments inline",
-      "description": "When on, ofw_download_attachment returns bytes inline as MCP content (images render directly; other files come back as embedded resources) instead of writing to disk. Recommended for sandboxed hosts like Claude Desktop where the model cannot read files written to ~/Downloads. Callers can still override per-call via the tool's `inline` argument.",
-      "required": false,
-      "default": false
-    },
-    "ofw_attachments_dir": {
-      "type": "directory",
-      "title": "Attachments download directory",
-      "description": "Directory where ofw_download_attachment writes files when not returning inline. Defaults to ~/Downloads/ofw-mcp/. Pick a directory that is readable by your MCP host.",
-      "required": false
-    },
-    "ofw_write_mode": {
-      "type": "string",
-      "title": "Write mode",
-      "description": "Structural write gate. \"none\" = no write tools registered (read/sync/search only); \"drafts\" = draft-level writes only (save/delete drafts, upload attachments — never send or calendar/expense/journal writes); \"all\" = everything (default). Unrecognized values fail closed to \"none\".",
-      "required": false,
-      "default": "all"
+      ]
     }
   },
   "tools": [
     {
-      "name": "ofw_get_profile",
-      "description": "Get current user and co-parent info"
+      "name": "hemnet_autocomplete_location",
+      "description": "Resolve a place name to Hemnet location ids"
     },
     {
-      "name": "ofw_get_notifications",
-      "description": "Get dashboard summary: unread messages, upcoming events, outstanding expenses"
+      "name": "hemnet_search_listings",
+      "description": "Search active for-sale listings by location and filters"
     },
     {
-      "name": "ofw_list_message_folders",
-      "description": "List message folders and unread counts"
+      "name": "hemnet_get_listing",
+      "description": "Full detail for one active for-sale listing by id or URL"
     },
     {
-      "name": "ofw_list_messages",
-      "description": "List messages in a folder"
+      "name": "hemnet_get_listing_photos",
+      "description": "Gallery photo URLs for a listing"
     },
     {
-      "name": "ofw_get_message",
-      "description": "Read a message by ID"
+      "name": "hemnet_search_sold",
+      "description": "Search sold listings (slutpriser) with final prices"
     },
     {
-      "name": "ofw_send_message",
-      "description": "Send a message"
+      "name": "hemnet_get_sold_listing",
+      "description": "Full detail for one sold listing by id or URL"
     },
     {
-      "name": "ofw_list_drafts",
-      "description": "List draft messages"
+      "name": "hemnet_get_market_stats",
+      "description": "Median/average sold-price statistics for a location"
     },
     {
-      "name": "ofw_save_draft",
-      "description": "Create or update a draft"
+      "name": "hemnet_compare_listings",
+      "description": "Fetch several listings at once for comparison"
     },
     {
-      "name": "ofw_delete_draft",
-      "description": "Delete a draft"
+      "name": "hemnet_get_by_address",
+      "description": "Resolve a street address to a live listing"
     },
     {
-      "name": "ofw_get_unread_sent",
-      "description": "List sent messages the co-parent has not yet viewed"
+      "name": "hemnet_calculate_mortgage",
+      "description": "Local Swedish monthly mortgage cost calculator"
     },
     {
-      "name": "ofw_upload_attachment",
-      "description": "Upload a file from disk to use as an attachment on a message or draft"
-    },
-    {
-      "name": "ofw_download_attachment",
-      "description": "Download a message attachment by fileId — returns bytes inline or writes to disk"
-    },
-    {
-      "name": "ofw_sync_messages",
-      "description": "Sync messages from OFW into local cache"
-    },
-    {
-      "name": "ofw_list_events",
-      "description": "List calendar events in a date range"
-    },
-    {
-      "name": "ofw_create_event",
-      "description": "Create a calendar event"
-    },
-    {
-      "name": "ofw_update_event",
-      "description": "Update a calendar event"
-    },
-    {
-      "name": "ofw_delete_event",
-      "description": "Delete a calendar event"
-    },
-    {
-      "name": "ofw_get_expense_totals",
-      "description": "Get expense summary totals"
-    },
-    {
-      "name": "ofw_list_expenses",
-      "description": "List expenses"
-    },
-    {
-      "name": "ofw_create_expense",
-      "description": "Log a new expense"
-    },
-    {
-      "name": "ofw_list_journal_entries",
-      "description": "List journal entries"
-    },
-    {
-      "name": "ofw_create_journal_entry",
-      "description": "Create a journal entry"
+      "name": "hemnet_healthcheck",
+      "description": "Verify the Hemnet GraphQL endpoint is reachable"
     }
   ],
   "compatibility": {
     "platforms": [
       "darwin",
-      "win32"
+      "win32",
+      "linux"
     ],
     "runtimes": {
-      "node": ">=22.5.0"
+      "node": ">=22.0.0"
     }
   }
 }

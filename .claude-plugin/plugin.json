@@ -1,20 +1,21 @@
 {
-  "name": "ofw",
-  "displayName": "OurFamilyWizard",
-  "version": "2.4.4",
-  "description": "OurFamilyWizard co-parenting tools for Claude — messages, calendar, expenses, and journal via MCP",
+  "name": "hemnet",
+  "displayName": "Hemnet",
+  "version": "0.1.0",
+  "description": "Hemnet.se real estate tools for Claude — search, sold prices, listings, and market stats via MCP",
   "author": {
     "name": "Chris Chall"
   },
-  "homepage": "https://github.com/chrischall/ofw-mcp",
-  "repository": "https://github.com/chrischall/ofw-mcp",
+  "homepage": "https://github.com/chrischall/hemnet-mcp",
+  "repository": "https://github.com/chrischall/hemnet-mcp",
   "license": "MIT",
   "keywords": [
-    "ofw",
-    "coparenting",
-    "ourFamilyWizard",
-    "mcp",
-    "family"
+    "hemnet",
+    "real-estate",
+    "sweden",
+    "property",
+    "bostad",
+    "mcp"
   ],
   "skills": "./skills/",
   "mcp": "./.mcp.json"

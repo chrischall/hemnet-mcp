@@ -1,218 +1,166 @@
-import { loadDotenvSafely, parseBoolEnv, redactSecrets } from '@chrischall/mcp-utils';
-import { TokenManager } from '@chrischall/mcp-utils/session';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
-import { resolveAuth } from './auth.js';
-import { BASE_URL, OFW_PROTOCOL_HEADERS, OFW_TOKEN_TTL_MS, OFW_TOKEN_EXPIRY_SKEW_MS } from './protocol.js';
+/**
+ * HemnetClient — the typed query surface every tool (and realty-meta)
+ * talks to.
+ *
+ * It wraps a {@link HemnetTransport} (direct `fetch` by default) with the
+ * Hemnet-semantic layer the transport deliberately omits:
+ *
+ *   - GraphQL `errors` → a thrown {@link McpToolError} (message run
+ *     through `redactSecrets` + truncation for parity with the fleet's
+ *     bearer clients, even though Hemnet's anonymous reads carry no
+ *     credential to leak).
+ *   - one typed method per operation, each returning the raw node(s) for
+ *     the formatters in src/format.ts to normalise.
+ *
+ * Tools depend on this class, never on the transport or the operation
+ * strings directly — so a tool test only has to stub `graphql`.
+ */
+import {
+  McpToolError,
+  redactSecrets,
+  truncateErrorMessage,
+} from '@chrischall/mcp-utils';
+import type { HemnetTransport } from './transport.js';
+import {
+  AUTOCOMPLETE_LOCATIONS,
+  GET_LISTING,
+  GET_SOLD_LISTING,
+  SEARCH_FOR_SALE,
+  SEARCH_SALES,
+  type HemnetSearchInput,
+  type RawListingCard,
+  type RawListingDetail,
+  type RawLocationHit,
+  type RawSaleCard,
+  type RawSoldDetail,
+  type SortOption,
+} from './graphql.js';
 
-// Load .env for local dev; silently skip if dotenv is unavailable (e.g. mcpb
-// bundle). loadDotenvSafely applies override:false + quiet:true and swallows a
-// missing dotenv module, matching the prior inline try/catch exactly.
-const __dirname = dirname(fileURLToPath(import.meta.url));
-await loadDotenvSafely({ path: join(__dirname, '..', '.env') });
+/** Default number of gallery images requested by `getListing`. */
+export const DEFAULT_PHOTO_LIMIT = 50;
 
-export interface BinaryResponse {
-  body: Buffer;
-  contentType: string | null;
-  /** Parsed from Content-Disposition header if present. */
-  suggestedFileName: string | null;
+export interface SearchOptions {
+  limit?: number;
+  offset?: number;
+  sort?: SortOption;
 }
 
-// Parse a Content-Disposition header for a filename. Prefers RFC 6266
-// `filename*=UTF-8''…` (percent-decoded) and falls back to `filename="…"`.
-function parseContentDispositionFilename(cd: string): string | null {
-  const extMatch = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(cd);
-  if (extMatch) {
-    const raw = extMatch[1].trim().replace(/^"|"$/g, '');
-    try { return decodeURIComponent(raw); } catch { return raw; }
-  }
-  const m = /filename="?([^";]+)"?/i.exec(cd);
-  return m ? m[1] : null;
+export interface HemnetClientOptions {
+  transport: HemnetTransport;
 }
 
-// Set OFW_DEBUG_LOG=1 (or true/yes/on) to log every OFW request/response to
-// stderr. Authorization is redacted. Bodies are logged in full — set this
-// only when debugging, never in normal use.
-function debugLogEnabled(): boolean {
-  return parseBoolEnv('OFW_DEBUG_LOG');
-}
+export class HemnetClient {
+  private readonly transport: HemnetTransport;
 
-// Per-request timeout. Overridable via OFW_REQUEST_TIMEOUT_MS. The default
-// (30s) is comfortably above OFW's typical p99 but low enough that a stuck
-// upstream fails fast instead of burning the MCP client-side budget — which
-// is what produced the multi-minute hangs we've seen on ofw_list_messages
-// and ofw_save_draft. Each retry (401/429 replay) gets its own fresh window.
-const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
-function getRequestTimeoutMs(): number {
-  const raw = process.env.OFW_REQUEST_TIMEOUT_MS;
-  if (typeof raw !== 'string' || raw.trim().length === 0) return DEFAULT_REQUEST_TIMEOUT_MS;
-  const n = Number(raw.trim());
-  return Number.isFinite(n) && n > 0 ? n : DEFAULT_REQUEST_TIMEOUT_MS;
-}
-
-// Sentinel "refresh token" handed to the shared TokenManager. OFW has no
-// OAuth-style refresh token — every renewal re-runs the full `resolveAuth()`
-// (password POST or fetchproxy snapshot). The TokenManager only refuses to
-// refresh when its refresh token is `undefined`, so a non-empty placeholder
-// keeps the single-flight refresh path live; the refresh callback ignores it.
-const OFW_REFRESH_SENTINEL = 'ofw';
-
-export class OFWClient {
-  // Bearer-token lifecycle is delegated to the shared, race-safe TokenManager
-  // (proactive refresh inside the skew window, single-flight refresh so a burst
-  // of concurrent callers coalesces onto ONE `resolveAuth()`, and a 401-replay
-  // guarded against double-refresh). It is created lazily, seeded with an
-  // already-expired placeholder token so the first request drives the refresh
-  // callback — i.e. the original "log in on first request" behavior.
-  private tokenManager: TokenManager | undefined;
-
-  private getTokenManager(): TokenManager {
-    if (!this.tokenManager) {
-      this.tokenManager = new TokenManager({
-        initial: { accessToken: '', refreshToken: OFW_REFRESH_SENTINEL, expiresAt: 0 },
-        skewMs: OFW_TOKEN_EXPIRY_SKEW_MS,
-        // Map OFW's mint/refresh onto the refresh callback. `resolveAuth()`
-        // returns a token and a best-effort expiry; when the fetchproxy path
-        // can't supply one we fall back to the same 6h estimate the password
-        // path uses (the 401-replay covers a wrong guess). We re-arm the
-        // sentinel so the manager can refresh again later.
-        refresh: async () => {
-          const { token, expiresAt } = await resolveAuth();
-          return {
-            accessToken: token,
-            refreshToken: OFW_REFRESH_SENTINEL,
-            expiresAt: (expiresAt ?? new Date(Date.now() + OFW_TOKEN_TTL_MS)).getTime(),
-          };
-        },
-      });
-    }
-    return this.tokenManager;
+  constructor(opts: HemnetClientOptions) {
+    this.transport = opts.transport;
   }
 
-  async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const response = await this.fetchAuthed(method, path, body, 'application/json');
-    const text = await response.text();
-    if (debugLogEnabled()) {
-      console.error(`[ofw-debug] response body: ${text || '<empty>'}`);
-    }
-    return (text ? JSON.parse(text) : null) as T;
-  }
-
-  /** Like `request`, but returns the raw bytes plus Content-Type/-Disposition metadata. */
-  async requestBinary(method: string, path: string): Promise<BinaryResponse> {
-    const response = await this.fetchAuthed(method, path, undefined, 'application/octet-stream');
-    return {
-      body: Buffer.from(await response.arrayBuffer()),
-      contentType: response.headers.get('content-type'),
-      suggestedFileName: parseContentDispositionFilename(response.headers.get('content-disposition') ?? ''),
-    };
-  }
-
-  // Authenticated fetch for both JSON and binary callers. Auth (proactive
-  // refresh inside the skew window + one 401-replay, guarded against a
-  // double-refresh under concurrency) is delegated to the shared TokenManager's
-  // `withAuth`. The 429 wait-and-replay and the non-2xx → throw remain here.
-  private async fetchAuthed(
-    method: string,
-    path: string,
-    body: unknown,
-    accept: string,
-  ): Promise<Response> {
-    // `withAuth` invokes `call` once, and again after a refresh on a 401. The
-    // second invocation is the replay — mark it `(retry)` in the debug log,
-    // preserving the prior bespoke-loop diagnostic.
-    let attempt = 0;
-    let response = await this.getTokenManager().withAuth((token) =>
-      this.fetchOnce(method, path, body, accept, token, attempt++ > 0),
-    );
-    if (response.status === 429) {
-      await new Promise<void>((r) => setTimeout(r, 2000));
-      response = await this.getTokenManager().withAuth((token) =>
-        this.fetchOnce(method, path, body, accept, token, true),
+  /**
+   * Run a GraphQL operation and return `data`, throwing an
+   * {@link McpToolError} on a GraphQL-level `errors` array or a null
+   * `data` envelope. Error text is redacted + truncated before surfacing.
+   */
+  private async run<T>(
+    query: string,
+    variables: Record<string, unknown>,
+  ): Promise<T> {
+    const envelope = await this.transport.graphql<T>(query, variables);
+    if (envelope.errors && envelope.errors.length > 0) {
+      const joined = envelope.errors.map((e) => e.message).join('; ');
+      throw new McpToolError(
+        `Hemnet GraphQL error: ${truncateErrorMessage(redactSecrets(joined))}`,
       );
-      if (response.status === 429) throw new Error('Rate limited by OFW API');
     }
-    if (!response.ok) {
-      throw new Error(`OFW API error: ${response.status} ${response.statusText} for ${method} ${path}`);
+    if (envelope.data == null) {
+      throw new McpToolError('Hemnet GraphQL returned an empty response.');
     }
-    return response;
+    return envelope.data;
   }
 
-  // A single OFW API fetch with the bearer token supplied by `withAuth`.
-  // Carries the per-request timeout (AbortController + setTimeout so vitest
-  // fake timers can drive it and we attach a clear error message) and the
-  // OFW_DEBUG_LOG instrumentation. Returns the raw Response — 401/429/non-2xx
-  // handling lives in the callers (`withAuth` and `fetchAuthed`).
-  private async fetchOnce(
-    method: string,
-    path: string,
-    body: unknown,
-    accept: string,
-    token: string,
-    isRetry = false,
-  ): Promise<Response> {
-    const isFormData = body instanceof FormData;
-    const headers: Record<string, string> = {
-      ...OFW_PROTOCOL_HEADERS,
-      Accept: accept,
-      Authorization: `Bearer ${token}`,
-    };
-    if (body !== undefined && !isFormData) headers['Content-Type'] = 'application/json';
+  /** Free-text place name → ranked location hits (search takes ids). */
+  async autocompleteLocations(
+    query: string,
+    limit: number,
+  ): Promise<RawLocationHit[]> {
+    const data = await this.run<{
+      autocompleteLocations: { hits: RawLocationHit[] | null } | null;
+    }>(AUTOCOMPLETE_LOCATIONS, { query, limit });
+    return data.autocompleteLocations?.hits ?? [];
+  }
 
-    const url = `${BASE_URL}${path}`;
-    if (debugLogEnabled()) {
-      const bodyPreview = body === undefined
-        ? '<none>'
-        : isFormData
-          ? `<FormData entries=${Array.from((body as FormData).keys()).join(',')}>`
-          : JSON.stringify(body);
-      console.error(`[ofw-debug] → ${method} ${url}${isRetry ? ' (retry)' : ''}`);
-      // redactSecrets scrubs the Bearer token (and any other secret shapes)
-      // from the serialized header map — shared fleet redaction, never bespoke.
-      console.error(`[ofw-debug]   headers: ${redactSecrets(JSON.stringify(headers))}`);
-      console.error(`[ofw-debug]   body: ${bodyPreview}`);
-    }
+  /** Active for-sale listings for the given search input. */
+  async searchForSale(
+    search: HemnetSearchInput,
+    opts: SearchOptions = {},
+  ): Promise<{ total: number; listings: RawListingCard[] }> {
+    const data = await this.run<{
+      searchForSaleListings: {
+        total: number;
+        listings: RawListingCard[] | null;
+      } | null;
+    }>(SEARCH_FOR_SALE, {
+      search,
+      limit: opts.limit ?? 25,
+      offset: opts.offset ?? 0,
+      sort: opts.sort ?? 'NEWEST',
+    });
+    const result = data.searchForSaleListings;
+    return { total: result?.total ?? 0, listings: result?.listings ?? [] };
+  }
 
-    // AbortController + setTimeout (not AbortSignal.timeout) so vitest fake
-    // timers can drive the timeout in tests, and so we can attach a clear
-    // error message instead of a bare DOMException on the abort path.
-    const timeoutMs = getRequestTimeoutMs();
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), timeoutMs);
-    const startedAt = Date.now();
+  /** Sold listings ("slutpriser") for the given search input. */
+  async searchSales(
+    search: HemnetSearchInput,
+    opts: SearchOptions = {},
+  ): Promise<{ total: number; cards: RawSaleCard[] }> {
+    const data = await this.run<{
+      searchSales: { total: number; cards: RawSaleCard[] | null } | null;
+    }>(SEARCH_SALES, {
+      search,
+      limit: opts.limit ?? 25,
+      offset: opts.offset ?? 0,
+      sort: opts.sort ?? 'NEWEST',
+    });
+    const result = data.searchSales;
+    return { total: result?.total ?? 0, cards: result?.cards ?? [] };
+  }
 
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        method,
-        headers,
-        signal: ac.signal,
-        ...(body !== undefined ? { body: isFormData ? body : JSON.stringify(body) } : {}),
-      });
-    } catch (err) {
-      const elapsed = Date.now() - startedAt;
-      if (ac.signal.aborted) {
-        if (debugLogEnabled()) {
-          console.error(`[ofw-debug] ⏱ TIMEOUT after ${elapsed}ms: ${method} ${url}`);
-        }
-        throw new Error(
-          `OFW API request timed out after ${timeoutMs}ms: ${method} ${path}`,
-        );
-      }
-      if (debugLogEnabled()) {
-        console.error(`[ofw-debug] ✗ ${(err as Error).message} after ${elapsed}ms: ${method} ${url}`);
-      }
-      throw err;
-    } finally {
-      clearTimeout(timer);
-    }
+  /**
+   * Full detail for one active for-sale listing. Returns `null` when the
+   * id resolves to nothing, or to a node that is not an
+   * `ActivePropertyListing` (e.g. a sold id passed here) — the caller can
+   * then fall back to {@link getSoldListing}.
+   */
+  async getListing(
+    id: string,
+    photoLimit: number = DEFAULT_PHOTO_LIMIT,
+  ): Promise<RawListingDetail | null> {
+    const data = await this.run<{
+      listing: (RawListingDetail & { __typename?: string }) | null;
+    }>(GET_LISTING, { id, photoLimit });
+    const node = data.listing;
+    if (node == null || node.__typename !== 'ActivePropertyListing') return null;
+    return node;
+  }
 
-    if (debugLogEnabled()) {
-      console.error(`[ofw-debug] ← ${response.status} ${response.statusText} (${Date.now() - startedAt}ms)`);
-    }
+  /** Full detail for one sold listing, or `null` if the id isn't a sale. */
+  async getSoldListing(id: string): Promise<RawSoldDetail | null> {
+    const data = await this.run<{
+      soldListing: (RawSoldDetail & { __typename?: string }) | null;
+    }>(GET_SOLD_LISTING, { id });
+    const node = data.soldListing;
+    if (node == null || node.__typename !== 'SoldPropertyListing') return null;
+    return node;
+  }
 
-    return response;
+  /**
+   * Cheap liveness probe: a tiny autocomplete round-trip. Returns the
+   * elapsed ms and hit count; throws (via {@link run}) if the endpoint or
+   * transport is down. Backs the `hemnet_healthcheck` tool.
+   */
+  async healthcheck(): Promise<{ ok: true; hits: number }> {
+    const hits = await this.autocompleteLocations('Stockholm', 1);
+    return { ok: true, hits: hits.length };
   }
 }
-
-export const client = new OFWClient();

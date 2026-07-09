@@ -1,0 +1,137 @@
+// Canned raw GraphQL nodes mirroring live hemnet.se shapes (captured
+// 2026-07, reverse-engineered from __APOLLO_STATE__). Used by the format,
+// client, and tool tests.
+import type {
+  RawListingCard,
+  RawListingDetail,
+  RawLocationHit,
+  RawSaleCard,
+  RawSoldDetail,
+} from '../src/graphql.js';
+
+export const LOCATION_HIT: RawLocationHit = {
+  locationId: '925970',
+  fullName: 'Vasastan',
+  parentFullName: 'Stockholms kommun',
+};
+
+export const LISTING_CARD: RawListingCard = {
+  __typename: 'ActivePropertyListing',
+  id: '21753145',
+  streetAddress: 'Roslagsgatan 60',
+  area: 'Vasastan',
+  numberOfRooms: 1,
+  livingArea: 23.5,
+  listingHemnetUrl: 'https://www.hemnet.se/bostad/lagenhet-1rum-vasastan-roslagsgatan-60-21753145',
+  askingPrice: { amount: 2695000, formatted: '2 695 000 kr' },
+  fee: { amount: 1893, formatted: '1 893 kr/mån' },
+  squareMeterPrice: { amount: 114681, formatted: '114 681 kr/m²' },
+  housingForm: { name: 'Lägenhet', symbol: 'APARTMENT', groups: ['APARTMENTS'] },
+  coordinates: { lat: 59.343, long: 18.05 },
+  daysOnHemnet: 3,
+  supplementalArea: null,
+  landArea: null,
+  legacyConstructionYear: '1929',
+  tenure: { name: 'Bostadsrätt', symbol: 'TENANT_OWNERSHIP' },
+  isNewConstruction: false,
+  isForeclosure: false,
+  isUpcoming: false,
+};
+
+/** A house card that omits squareMeterPrice — exercises the derived fallback. */
+export const HOUSE_CARD: RawListingCard = {
+  __typename: 'ActivePropertyListing',
+  id: '21710712',
+  streetAddress: 'Gäddstigen 1',
+  area: 'Pershagen',
+  numberOfRooms: 5,
+  livingArea: 101,
+  listingHemnetUrl: 'https://www.hemnet.se/bostad/radhus-5rum-pershagen-gaddstigen-1-21710712',
+  askingPrice: { amount: 3995000, formatted: '3 995 000 kr' },
+  fee: null,
+  squareMeterPrice: null,
+  housingForm: { name: 'Parhus', symbol: 'TWIN_HOUSE', groups: ['ROW_HOUSES'] },
+  coordinates: { lat: 59.147, long: 17.661 },
+  daysOnHemnet: 10,
+  supplementalArea: 8,
+  landArea: 350,
+  legacyConstructionYear: '1983',
+  tenure: { name: 'Äganderätt', symbol: 'OWNED' },
+  isNewConstruction: false,
+  isForeclosure: false,
+  isUpcoming: false,
+};
+
+export const LISTING_DETAIL: RawListingDetail = {
+  ...HOUSE_CARD,
+  postCode: '15139',
+  formattedLivingArea: '101 m²',
+  formattedSupplementalArea: '8 m²',
+  formattedLandArea: '350 m²',
+  timesViewed: 2744,
+  biddingStarted: true,
+  isBiddingOngoing: true,
+  description: 'Parhus i barnvänligt och bilfritt bostadsområde.',
+  runningCosts: { amount: 46390, formatted: '46 390 kr' },
+  municipality: { fullName: 'Södertälje kommun' },
+  region: { fullName: 'Stockholms län' },
+  broker: { name: 'Thomas Aslan' },
+  brokerAgency: { name: 'Fastighetsbyrån Södertälje' },
+  energyClassification: { classification: 'D' },
+  labels: [
+    { identifier: 'ONGOING_VERIFIED_BIDDING', category: 'STATE', text: 'Budgivning pågår' },
+    { identifier: 'NULL_TEXT', category: 'STATE', text: null },
+  ],
+  images: {
+    total: 43,
+    images: [
+      { url: 'https://bilder.hemnet.se/images/itemgallery_L/cd/79/a.jpg' },
+      { url: 'https://bilder.hemnet.se/images/itemgallery_L/41/3f/b.jpg' },
+      { url: null },
+    ],
+  },
+};
+
+export const SALE_CARD: RawSaleCard = {
+  __typename: 'SaleCard',
+  id: '6254767670540539069',
+  streetAddress: 'Nordenflychtsvägen 64',
+  locationDescription: 'Västra Kungsholmen, Stockholms kommun',
+  slug: 'lagenhet-2rum-vastra-kungsholmen-nordenflychtsvagen-64-6254767670540539069',
+  finalPrice: '5 950 000 kr',
+  askingPrice: '5 795 000 kr',
+  priceChange: '+3 %',
+  soldAt: '1783555200.0',
+  soldAtLabel: 'Såld 9 jul. 2026',
+  livingArea: '64 m²',
+  rooms: '2 rum',
+  squareMeterPrice: '92 969 kr/m²',
+  fee: '3 809 kr/mån',
+  landArea: null,
+  housingForm: { name: 'Lägenhet', symbol: 'APARTMENT', groups: ['APARTMENTS'] },
+  coordinates: { lat: 59.338, long: 18.009 },
+};
+
+export const SOLD_DETAIL: RawSoldDetail = {
+  __typename: 'SoldPropertyListing',
+  id: '6254767670540539069',
+  streetAddress: 'Nordenflychtsvägen 64',
+  area: 'Västra Kungsholmen - Hornsbergs strand',
+  numberOfRooms: 2,
+  livingArea: 64,
+  formattedLandArea: null,
+  legacyConstructionYear: '2017',
+  soldAt: '1783555200.0',
+  hemnetUrl: 'https://www.hemnet.se/salda/lagenhet-2rum-6254767670540539069',
+  sellingPrice: { amount: 5950000, formatted: '5 950 000 kr' },
+  askingPrice: { amount: 5795000, formatted: '5 795 000 kr' },
+  priceChange: { amount: 155000, formatted: '155 000 kr' },
+  squareMeterSellingPrice: { amount: 92969, formatted: '92 969 kr/m²' },
+  housingForm: { name: 'Lägenhet', symbol: 'APARTMENT', groups: ['APARTMENTS'] },
+  tenure: { name: 'Bostadsrätt', symbol: 'TENANT_OWNERSHIP' },
+  fee: { amount: 3809, formatted: '3 809 kr' },
+  coordinates: { lat: 59.338, long: 18.009 },
+  municipality: { fullName: 'Stockholms kommun' },
+  broker: { name: 'Erika Asp' },
+  brokerAgency: { name: 'Diplomat' },
+};
