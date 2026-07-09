@@ -18,7 +18,7 @@ import { HemnetClient } from './client.js';
 import { DirectTransport } from './transport-direct.js';
 import { registerHemnetTools } from './tools/index.js';
 
-const VERSION = '0.1.0'; // x-release-please-version
+const VERSION = '0.2.0'; // x-release-please-version
 
 const client = new HemnetClient({
   transport: new DirectTransport({ version: VERSION }),
