@@ -1,40 +1,35 @@
 #!/usr/bin/env node
-const originalEmit = process.emit.bind(process);
-type EmitFn = (event: string | symbol, ...args: unknown[]) => boolean;
-(process.emit as EmitFn) = function (event: string | symbol, ...args: unknown[]): boolean {
-  if (event === 'warning') {
-    const w = args[0] as { name?: string; message?: string } | undefined;
-    if (w?.name === 'ExperimentalWarning' && /SQLite/i.test(w.message ?? '')) {
-      return false;
-    }
-  }
-  return (originalEmit as EmitFn)(event, ...args);
-};
+// hemnet-mcp entrypoint — standalone stdio MCP server for hemnet.se.
+//
+// Boot sequence:
+//   1. Build the default direct-`fetch` GraphQL transport + HemnetClient.
+//      Unlike the fetchproxy fleet members, Hemnet serves its read
+//      queries anonymously, so there's no bridge to start and no browser
+//      session to bootstrap — the client is ready immediately.
+//   2. runMcp() builds the McpServer, applies the tool registrars with
+//      the client as deps, prints the banner to stderr, wires graceful
+//      shutdown, and connects the stdio transport.
+//
+// For embedding Hemnet into a larger server (realty-meta), import the
+// registrars / client from 'hemnet-mcp' (src/lib.ts) instead of running
+// this file.
 import { runMcp } from '@chrischall/mcp-utils';
-import { client } from './client.js';
-import { registerUserTools } from './tools/user.js';
-import { registerMessageTools } from './tools/messages.js';
-import { registerCalendarTools } from './tools/calendar.js';
-import { registerExpenseTools } from './tools/expenses.js';
-import { registerJournalTools } from './tools/journal.js';
+import { HemnetClient } from './client.js';
+import { DirectTransport } from './transport-direct.js';
+import { registerHemnetTools } from './tools/index.js';
 
-// runMcp builds the McpServer, applies the registrars (with `client` threaded
-// through as deps), prints the banner to stderr, wires SIGINT/SIGTERM graceful
-// shutdown, and connects the stdio transport. The deferred-config-error pattern
-// is preserved: `client` is constructed at module load in ./client.js (auth is
-// resolved lazily on the first tool call), so the host's initial tools/list
-// always succeeds before any credential check runs.
+const VERSION = '0.1.0'; // x-release-please-version
+
+const client = new HemnetClient({
+  transport: new DirectTransport({ version: VERSION }),
+});
+
 await runMcp({
-  name: 'ofw',
-  version: '2.4.4', // x-release-please-version
-  deps: client,
-  tools: [
-    registerUserTools,
-    registerMessageTools,
-    registerCalendarTools,
-    registerExpenseTools,
-    registerJournalTools,
-  ],
+  name: 'hemnet-mcp',
+  version: VERSION,
   banner:
-    '[ofw-mcp] This project was developed and is maintained by AI (Claude Sonnet 4.6). Use at your own discretion.',
+    `[hemnet-mcp] v${VERSION} — reads hemnet.se via its public GraphQL API ` +
+    '(direct fetch, no auth). This project was developed and is maintained by AI (Claude). ' +
+    'Use at your own discretion and within hemnet.se\'s terms.',
+  tools: [(server) => registerHemnetTools(server, client)],
 });
