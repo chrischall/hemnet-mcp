@@ -45,6 +45,61 @@ function delay(ms: number): Promise<void> {
  */
 class HardHttpError extends Error {}
 
+/**
+ * Hemnet answered with a Cloudflare bot challenge instead of GraphQL.
+ * Observed live 2026-07-13: the whole www.hemnet.se zone (including
+ * `/graphql`) serves a managed challenge (`cf-mitigated: challenge`,
+ * `_cf_chl_opt` interstitial) to non-browser clients regardless of
+ * headers — only a real browser session clears it. Callers use this type
+ * to fall back to the fetchproxy browser bridge.
+ */
+export class CloudflareChallengeError extends HardHttpError {}
+
+/**
+ * Definitive challenge markers only (per fleet guidance): the
+ * `cf-mitigated: challenge` response header, or the interstitial's
+ * `_cf_chl_opt` script / "Just a moment" title in the body. Do NOT match
+ * `challenges.cloudflare.com` — Cloudflare inlines that on cleared pages.
+ */
+function isCloudflareChallenge(res: Response, bodyHead: string): boolean {
+  return (
+    res.headers.get('cf-mitigated') === 'challenge' ||
+    bodyHead.includes('_cf_chl_opt') ||
+    bodyHead.includes('<title>Just a moment')
+  );
+}
+
+/**
+ * Build the diagnostic error for a non-retryable HTTP failure: status,
+ * the `server` / `cf-ray` / `cf-mitigated` headers when present, and the
+ * first ~200 chars of the body — a bare "HTTP 403" hides which failure
+ * mode (bot wall vs. moved endpoint vs. bad request) you're in.
+ */
+async function hardHttpError(res: Response): Promise<HardHttpError> {
+  let bodyHead = '';
+  try {
+    bodyHead = (await res.text()).slice(0, 200);
+  } catch {
+    // Diagnostics are best-effort; the status alone still tells the story.
+  }
+  const diag = ['server', 'cf-ray', 'cf-mitigated']
+    .map((name) => ({ name, value: res.headers.get(name) }))
+    .filter((h) => h.value)
+    .map((h) => `${h.name}: ${h.value}`)
+    .join('; ');
+  if (isCloudflareChallenge(res, bodyHead)) {
+    return new CloudflareChallengeError(
+      `Hemnet GraphQL HTTP ${res.status} — Cloudflare bot challenge` +
+        `${diag ? ` (${diag})` : ''}. Hemnet challenges non-browser clients; ` +
+        'requests must ride a real browser session (fetchproxy bridge).',
+    );
+  }
+  return new HardHttpError(
+    `Hemnet GraphQL HTTP ${res.status}${diag ? ` (${diag})` : ''}` +
+      `${bodyHead ? ` — body starts: ${bodyHead}` : ''}`,
+  );
+}
+
 export class DirectTransport implements HemnetTransport {
   private readonly endpoint: string;
   private readonly timeoutMs: number;
@@ -88,9 +143,10 @@ export class DirectTransport implements HemnetTransport {
           return (await res.json()) as GraphQLResponse<T>;
         }
         // A retryable status loops with backoff; any other non-2xx is a
-        // hard failure we surface immediately (no point retrying a 400).
+        // hard failure we surface immediately (no point retrying a 400,
+        // and a Cloudflare challenge rejects every non-browser attempt).
         if (!RETRYABLE_STATUS.has(res.status)) {
-          throw new HardHttpError(`Hemnet GraphQL HTTP ${res.status}`);
+          throw await hardHttpError(res);
         }
         lastError = new Error(`Hemnet GraphQL HTTP ${res.status}`);
       } catch (err) {

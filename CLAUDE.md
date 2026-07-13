@@ -10,12 +10,26 @@ detail, photos, and market statistics; resolves place names and street
 addresses; and does a local Swedish mortgage calculation. stdio
 transport.
 
-**Data access is a plain, anonymous GraphQL fetch — no auth, no browser
-session, no fetchproxy.** This is the key architectural difference from
-the fleet's fetchproxy members (homes-mcp, etc.): homes.com gates every
-request behind AWS WAF at the session level, so it *must* ride the user's
-Chrome tab per call. Hemnet serves its read queries to anonymous clients,
-so hemnet-mcp talks to `https://www.hemnet.se/graphql` directly.
+**Data access is an anonymous GraphQL fetch with a browser-bridge
+fallback.** The queries themselves need no auth — no login, no Hemnet
+session — but as of **2026-07-13** Hemnet fronts the whole www.hemnet.se
+zone (including `/graphql`) with a **Cloudflare managed challenge**
+(`cf-mitigated: challenge`, `_cf_chl_opt` interstitial) that 403s every
+non-browser client regardless of headers/User-Agent. Cloudflare
+fingerprints the HTTP client itself, so no header set or replayed cookie
+durably clears it — the request must ride a real browser session. So the
+default transport (`src/transport-fallback.ts`) tries a direct anonymous
+`fetch` first and, the moment it gets a `CloudflareChallengeError`,
+switches to the **fetchproxy bridge** (`src/transport-fetchproxy.ts`) for
+the rest of the process — a same-origin fetch inside the user's own
+www.hemnet.se tab (no login needed, just a cleared Cloudflare session).
+`HEMNET_TRANSPORT` pins the mode: `direct` (fail hard when walled),
+`fetchproxy` (always bridge), `auto` (default fallback). When Hemnet
+drops or re-scopes the wall, `auto` transparently rides the direct path
+again. This makes hemnet-mcp a fetchproxy member like homes-mcp/redfin,
+but **lazily** — the bridge is only built if/when the direct path is
+actually walled, and the fetchproxy fleet shares port `37149`
+(`HEMNET_WS_PORT`).
 
 **Dual-purpose by design.** hemnet-mcp is both (1) a standalone stdio MCP
 server (the `bin`), and (2) an importable library (`import … from
@@ -50,13 +64,19 @@ local math).
 
 ```
 src/
-  index.ts              # stdio entry — builds DirectTransport + HemnetClient,
-                        #   applies registerHemnetTools via runMcp()
+  index.ts              # stdio entry — builds the default transport (direct+
+                        #   fallback) + HemnetClient, registerHemnetTools via runMcp()
   lib.ts                # LIBRARY entry (package `exports` "."): re-exports the
                         #   client, formatters, record types, pure derivations,
                         #   and registrars for realty-meta. createHemnetClient().
   transport.ts          # HemnetTransport interface (graphql(query, variables))
-  transport-direct.ts   # DirectTransport — default direct fetch, retry/backoff
+  transport-direct.ts   # DirectTransport — direct fetch, retry/backoff; raises
+                        #   CloudflareChallengeError on a `cf-mitigated` 403
+  transport-fetchproxy.ts # HemnetFetchproxyTransport — same-origin fetch inside
+                        #   the user's www.hemnet.se tab via @fetchproxy/server
+  transport-fallback.ts # FallbackTransport + createDefaultTransport — direct
+                        #   first, switch to the bridge on a challenge; reads
+                        #   HEMNET_TRANSPORT (direct|fetchproxy|auto)
   client.ts             # HemnetClient — typed query methods; GraphQL errors →
                         #   McpToolError (redacted); null/typename guards
   graphql.ts            # GraphQL operation strings + raw response types +
