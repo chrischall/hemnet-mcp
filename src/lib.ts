@@ -106,10 +106,10 @@ import type { DefaultTransportOptions } from './transport-fallback.js';
  * One-line construction of a ready {@link HemnetClient} over the default
  * transport: a direct anonymous `fetch` that falls back to the fetchproxy
  * browser bridge when Hemnet's Cloudflare wall rejects it, honouring
- * `HEMNET_TRANSPORT` (`direct` / `fetchproxy` / `auto`). For full control
- * of the wire (endpoint override, timeout, injected fetch) construct a
- * {@link DirectTransport} and pass it to `new HemnetClient({ transport })`
- * directly.
+ * `HEMNET_TRANSPORT` (`direct` / `fetchproxy` / `auto`). `opts` extends
+ * {@link DirectTransportOptions}, so the wire knobs (`endpoint`,
+ * `timeoutMs`, `maxRetries`, `fetchImpl`, `version`) pass straight through
+ * to the underlying direct transport as they always have.
  */
 export function createHemnetClient(
   opts: DefaultTransportOptions = {},

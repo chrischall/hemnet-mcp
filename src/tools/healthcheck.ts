@@ -8,10 +8,12 @@ import { textResult } from '../mcp.js';
  * endpoint.
  *
  * Runs a tiny autocomplete round-trip and reports `ok`, the elapsed ms,
- * and a plain-English hint. Because hemnet-mcp talks to Hemnet directly
- * (no fetchproxy bridge, no browser session), a failure here isolates
- * cleanly to network reachability or a Hemnet-side change — call it when
- * a real tool errors and you want to know whether the endpoint is up.
+ * and a plain-English hint. Because the round-trip goes through the same
+ * transport the tools use — the default direct fetch with browser-bridge
+ * fallback (see transport-fallback.ts) — a failure isolates cleanly to
+ * network reachability, Hemnet's Cloudflare wall, or a Hemnet-side change.
+ * Call it when a real tool errors and you want to know whether the
+ * endpoint is up and which path is in play.
  */
 export function registerHealthcheckTools(
   server: McpServer,
@@ -43,7 +45,11 @@ export function registerHealthcheckTools(
         });
       } catch (err) {
         const error = messageOf(err);
-        const walled = /Cloudflare|non-JSON|browser bridge/i.test(error);
+        // Any Cloudflare-challenge or bridge-path failure gets the
+        // browser-bridge remediation hint. `bridge` covers both the
+        // "Hemnet bridge: …" wrapper (transport-fetchproxy.ts) and the
+        // "… via browser bridge" HTTP/non-JSON messages.
+        const walled = /Cloudflare|non-JSON|bridge/i.test(error);
         return textResult({
           ok: false,
           elapsed_ms: Date.now() - start,
