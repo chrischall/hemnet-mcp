@@ -42,11 +42,15 @@ export function registerHealthcheckTools(
           hint: 'Hemnet GraphQL endpoint is reachable and responding.',
         });
       } catch (err) {
+        const error = messageOf(err);
+        const walled = /Cloudflare|non-JSON|browser bridge/i.test(error);
         return textResult({
           ok: false,
           elapsed_ms: Date.now() - start,
-          error: messageOf(err),
-          hint: 'Hemnet GraphQL did not respond. Check network reachability; the endpoint or a queried field may have changed.',
+          error,
+          hint: walled
+            ? 'Hemnet is serving a Cloudflare bot challenge. Set HEMNET_TRANSPORT=fetchproxy (or leave it at the default "auto"), keep a www.hemnet.se tab open (no login needed), and approve the Transporter pairing prompt if one appears.'
+            : 'Hemnet GraphQL did not respond. Check network reachability; the endpoint or a queried field may have changed.',
         });
       }
     },

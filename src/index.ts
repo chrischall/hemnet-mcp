@@ -2,10 +2,12 @@
 // hemnet-mcp entrypoint — standalone stdio MCP server for hemnet.se.
 //
 // Boot sequence:
-//   1. Build the default direct-`fetch` GraphQL transport + HemnetClient.
-//      Unlike the fetchproxy fleet members, Hemnet serves its read
-//      queries anonymously, so there's no bridge to start and no browser
-//      session to bootstrap — the client is ready immediately.
+//   1. Build the default GraphQL transport + HemnetClient. The default is
+//      a direct anonymous `fetch` that automatically falls back to the
+//      fetchproxy browser bridge if Hemnet's Cloudflare wall rejects it
+//      (see transport-fallback.ts). `HEMNET_TRANSPORT` pins the mode.
+//      Construction binds nothing — the bridge is only built if/when the
+//      direct path is actually walled.
 //   2. runMcp() builds the McpServer, applies the tool registrars with
 //      the client as deps, prints the banner to stderr, wires graceful
 //      shutdown, and connects the stdio transport.
@@ -15,13 +17,13 @@
 // this file.
 import { runMcp } from '@chrischall/mcp-utils';
 import { HemnetClient } from './client.js';
-import { DirectTransport } from './transport-direct.js';
+import { createDefaultTransport } from './transport-fallback.js';
 import { registerHemnetTools } from './tools/index.js';
 
 const VERSION = '0.2.0'; // x-release-please-version
 
 const client = new HemnetClient({
-  transport: new DirectTransport({ version: VERSION }),
+  transport: createDefaultTransport({ version: VERSION }),
 });
 
 await runMcp({
@@ -29,7 +31,8 @@ await runMcp({
   version: VERSION,
   banner:
     `[hemnet-mcp] v${VERSION} — reads hemnet.se via its public GraphQL API ` +
-    '(direct fetch, no auth). This project was developed and is maintained by AI (Claude). ' +
+    '(direct fetch, with browser-bridge fallback when Cloudflare-walled). ' +
+    'This project was developed and is maintained by AI (Claude). ' +
     'Use at your own discretion and within hemnet.se\'s terms.',
   tools: [(server) => registerHemnetTools(server, client)],
 });

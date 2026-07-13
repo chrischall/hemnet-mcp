@@ -1,12 +1,32 @@
 import { describe, it, expect, vi } from 'vitest';
-import { DirectTransport } from '../src/transport-direct.js';
+import {
+  CloudflareChallengeError,
+  DirectTransport,
+} from '../src/transport-direct.js';
 
 /** A minimal fetch stub returning a Response-like object. */
 function jsonResponse(status: number, body: unknown) {
   return {
     ok: status >= 200 && status < 300,
     status,
+    headers: new Headers(),
+    text: async () => JSON.stringify(body),
     json: async () => body,
+  } as unknown as Response;
+}
+
+/** A non-2xx Response-like stub with a raw text body and headers. */
+function textResponse(
+  status: number,
+  body: string,
+  headers: Record<string, string> = {},
+) {
+  return {
+    ok: false,
+    status,
+    headers: new Headers(headers),
+    text: async () => body,
+    json: async () => JSON.parse(body),
   } as unknown as Response;
 }
 
@@ -96,6 +116,69 @@ describe('DirectTransport', () => {
       maxRetries: 0,
     });
     await expect(t.graphql('q', {})).rejects.toThrow('aborted');
+  });
+
+  it('classifies a Cloudflare challenge 403 (cf-mitigated header) as CloudflareChallengeError', async () => {
+    const fetchImpl = vi.fn(async () =>
+      textResponse(403, '<!DOCTYPE html><html><head><title>Just a moment...</title>', {
+        'cf-mitigated': 'challenge',
+        'cf-ray': 'a1a7d3f27ca34ff4-ATL',
+        server: 'cloudflare',
+      }),
+    );
+    const t = new DirectTransport({ fetchImpl, maxRetries: 3 });
+    const err = await t.graphql('q', {}).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(CloudflareChallengeError);
+    const msg = (err as Error).message;
+    expect(msg).toContain('HTTP 403');
+    expect(msg).toContain('Cloudflare');
+    expect(msg).toContain('cf-ray: a1a7d3f27ca34ff4-ATL');
+    expect(msg).toContain('browser');
+    // Hard failure: no retries against a challenge wall.
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it('classifies a challenge by body marker with no diagnostic headers', async () => {
+    const fetchImpl = vi.fn(async () =>
+      textResponse(403, '<html><script>window._cf_chl_opt = {};</script></html>'),
+    );
+    const t = new DirectTransport({ fetchImpl });
+    const err = await t.graphql('q', {}).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(CloudflareChallengeError);
+    // No `(…)` diagnostic segment when no server/cf-ray/cf-mitigated present.
+    expect((err as Error).message).toContain('Cloudflare bot challenge.');
+  });
+
+  it('includes response body head and diagnostic headers in a plain 4xx error', async () => {
+    const body = `{"error":"nope"}${'x'.repeat(300)}`;
+    const fetchImpl = vi.fn(async () =>
+      textResponse(403, body, { server: 'nginx', 'cf-ray': 'abc123-CPH' }),
+    );
+    const t = new DirectTransport({ fetchImpl });
+    const err = await t.graphql('q', {}).catch((e: unknown) => e);
+    expect(err).not.toBeInstanceOf(CloudflareChallengeError);
+    const msg = (err as Error).message;
+    expect(msg).toContain('Hemnet GraphQL HTTP 403');
+    expect(msg).toContain('server: nginx');
+    expect(msg).toContain('cf-ray: abc123-CPH');
+    expect(msg).toContain('{"error":"nope"}');
+    // Body is capped at ~200 chars, not dumped wholesale.
+    expect(msg.length).toBeLessThan(500);
+  });
+
+  it('still errors cleanly when the failure body cannot be read', async () => {
+    const fetchImpl = vi.fn(async () =>
+      ({
+        ok: false,
+        status: 400,
+        headers: new Headers(),
+        text: async () => {
+          throw new Error('body stream lost');
+        },
+      }) as unknown as Response,
+    );
+    const t = new DirectTransport({ fetchImpl });
+    await expect(t.graphql('q', {})).rejects.toThrow('Hemnet GraphQL HTTP 400');
   });
 
   it('constructs with all defaults', () => {

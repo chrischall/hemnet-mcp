@@ -24,8 +24,15 @@
 // --- client + transport ------------------------------------------------
 export { HemnetClient, DEFAULT_PHOTO_LIMIT } from './client.js';
 export type { HemnetClientOptions, SearchOptions } from './client.js';
-export { DirectTransport } from './transport-direct.js';
+export { DirectTransport, CloudflareChallengeError } from './transport-direct.js';
 export type { DirectTransportOptions } from './transport-direct.js';
+export { HemnetFetchproxyTransport } from './transport-fetchproxy.js';
+export type {
+  FetchproxyTransportOptions,
+  HemnetBridge,
+} from './transport-fetchproxy.js';
+export { FallbackTransport, createDefaultTransport } from './transport-fallback.js';
+export type { DefaultTransportOptions } from './transport-fallback.js';
 export type { HemnetTransport, GraphQLResponse } from './transport.js';
 
 // --- normalised records + formatters -----------------------------------
@@ -92,16 +99,20 @@ export {
 } from './tools/index.js';
 
 import { HemnetClient } from './client.js';
-import { DirectTransport } from './transport-direct.js';
-import type { DirectTransportOptions } from './transport-direct.js';
+import { createDefaultTransport } from './transport-fallback.js';
+import type { DefaultTransportOptions } from './transport-fallback.js';
 
 /**
  * One-line construction of a ready {@link HemnetClient} over the default
- * direct-`fetch` transport. Pass transport options (endpoint override,
- * timeout, injected fetch) through for tests or a self-hosted proxy.
+ * transport: a direct anonymous `fetch` that falls back to the fetchproxy
+ * browser bridge when Hemnet's Cloudflare wall rejects it, honouring
+ * `HEMNET_TRANSPORT` (`direct` / `fetchproxy` / `auto`). For full control
+ * of the wire (endpoint override, timeout, injected fetch) construct a
+ * {@link DirectTransport} and pass it to `new HemnetClient({ transport })`
+ * directly.
  */
 export function createHemnetClient(
-  opts: DirectTransportOptions = {},
+  opts: DefaultTransportOptions = {},
 ): HemnetClient {
-  return new HemnetClient({ transport: new DirectTransport(opts) });
+  return new HemnetClient({ transport: createDefaultTransport(opts) });
 }
