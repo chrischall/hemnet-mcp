@@ -17,6 +17,7 @@
 import { readEnvVar } from '@chrischall/mcp-utils';
 import type { GraphQLResponse, HemnetTransport } from './transport.js';
 import { CloudflareChallengeError, DirectTransport } from './transport-direct.js';
+import type { DirectTransportOptions } from './transport-direct.js';
 import { HemnetFetchproxyTransport } from './transport-fetchproxy.js';
 
 export class FallbackTransport implements HemnetTransport {
@@ -51,9 +52,7 @@ export class FallbackTransport implements HemnetTransport {
   }
 }
 
-export interface DefaultTransportOptions {
-  /** Client version, surfaced in the direct UA and bridge status. */
-  version?: string;
+export interface DefaultTransportOptions extends DirectTransportOptions {
   /** Injected direct transport (tests). */
   direct?: HemnetTransport;
   /** Injected bridge factory (tests). */
@@ -64,11 +63,17 @@ export interface DefaultTransportOptions {
  * Build the transport `index.ts` (and library consumers) should use:
  * mode from `HEMNET_TRANSPORT`, defaulting to the direct-with-fallback
  * combination above. Unknown values warn to stderr and mean `auto`.
+ *
+ * `DefaultTransportOptions` extends `DirectTransportOptions`, so the
+ * wire-level knobs (`endpoint`, `timeoutMs`, `maxRetries`, `fetchImpl`,
+ * `version`) still flow through to the default direct transport exactly
+ * as they did before the fallback existed — passing `{ endpoint }` (etc.)
+ * keeps working.
  */
 export function createDefaultTransport(
   opts: DefaultTransportOptions = {},
 ): HemnetTransport {
-  const direct = opts.direct ?? new DirectTransport({ version: opts.version });
+  const direct = opts.direct ?? new DirectTransport(opts);
   const bridgeFactory =
     opts.bridgeFactory ??
     (() => new HemnetFetchproxyTransport({ version: opts.version }));

@@ -39,4 +39,18 @@ describe('hemnet_healthcheck', () => {
     expect(body.hint).toMatch(/tab open/);
     await h.close();
   });
+
+  it('gives the browser-bridge hint for a bridge-down error after fallback', async () => {
+    // Once the fallback has switched, transport-fetchproxy wraps failures as
+    // "Hemnet bridge: …" — the walled hint must catch those too.
+    const client = fakeClient(() => {
+      throw new Error('Hemnet bridge: fetchproxy bridge down during fetch');
+    });
+    const h = await createTestHarness((s) => registerHealthcheckTools(s, client));
+    const res = await h.callTool('hemnet_healthcheck', {});
+    const body = parseToolResult<{ ok: boolean; hint: string }>(res);
+    expect(body.ok).toBe(false);
+    expect(body.hint).toMatch(/HEMNET_TRANSPORT=fetchproxy/);
+    await h.close();
+  });
 });

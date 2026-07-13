@@ -63,6 +63,20 @@ describe('createDefaultTransport', () => {
     expect(createDefaultTransport()).toBeInstanceOf(DirectTransport);
   });
 
+  it('forwards wire options (endpoint/fetchImpl) to the default direct transport', async () => {
+    vi.stubEnv('HEMNET_TRANSPORT', 'direct');
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      text: async () => '{"data":{}}',
+      json: async () => ({ data: {} }),
+    })) as unknown as typeof fetch;
+    const t = createDefaultTransport({ endpoint: 'http://x/gql', fetchImpl });
+    await t.graphql('q', {});
+    expect(vi.mocked(fetchImpl).mock.calls[0]![0]).toBe('http://x/gql');
+  });
+
   it('builds the bridge transport when HEMNET_TRANSPORT=fetchproxy', () => {
     vi.stubEnv('HEMNET_TRANSPORT', 'fetchproxy');
     expect(createDefaultTransport()).toBeInstanceOf(HemnetFetchproxyTransport);
