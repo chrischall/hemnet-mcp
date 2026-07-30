@@ -3,7 +3,7 @@
   "version": "0.3.0",
   "license": "MIT",
   "mcpName": "io.github.chrischall/hemnet-mcp",
-  "description": "Hemnet.se MCP server for Claude — developed and maintained by AI (Claude Code)",
+  "description": "Hemnet.se MCP server for Claude \u2014 developed and maintained by AI (Claude Code)",
   "author": "Claude Code (AI) <https://www.anthropic.com/claude>",
   "repository": {
     "type": "git",
@@ -53,9 +53,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@chrischall/mcp-utils": "^0.13.1",
+    "@chrischall/mcp-utils": "^0.14.0",
     "@chrischall/realty-core": "^0.4.1",
-    "@fetchproxy/server": "^1.4.0",
+    "@fetchproxy/server": "^1.7.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^4.4.3"
   },
