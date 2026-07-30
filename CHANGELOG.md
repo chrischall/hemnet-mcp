@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/chrischall/hemnet-mcp/compare/v0.3.0...v0.3.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **deps:** bump @fetchproxy/* to 1.7.0 and @chrischall/mcp-utils to 0.14.0 ([#20](https://github.com/chrischall/hemnet-mcp/issues/20)) ([5310faa](https://github.com/chrischall/hemnet-mcp/commit/5310faa0099436ab94584c3ce8ee9b7a5e5d15fe))
+
 ## [0.3.0](https://github.com/chrischall/hemnet-mcp/compare/v0.2.0...v0.3.0) (2026-07-13)
 
 
