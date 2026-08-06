@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/chrischall/hemnet-mcp/compare/v0.3.1...v0.3.2) (2026-08-06)
+
+
+### Bug Fixes
+
+* **deps:** move to @fetchproxy/server 2.0.0 for the v3 handshake ([#27](https://github.com/chrischall/hemnet-mcp/issues/27)) ([fcf2e03](https://github.com/chrischall/hemnet-mcp/commit/fcf2e03345073ef47cc53c6453b47d536daf967d))
+
 ## [0.3.1](https://github.com/chrischall/hemnet-mcp/compare/v0.3.0...v0.3.1) (2026-07-30)
 
 
