@@ -1,0 +1,39 @@
+version: 1
+name: Hemnet
+slug: hemnet
+summary: >-
+  Hemnet.se real estate tools for Claude — search, sold prices, listings,
+  and market stats
+#
+# Hosting note (a comment, not user-facing summary text): this is a
+# BROWSER-BRIDGE MCP — it reaches its site through the user's signed-in
+# tab via the fetchproxy bridge. A bridged registration also needs runtime
+# `fly-shared`, `bridge: true` and a `bridgePortEnv`, which are registration
+# fields this manifest has no schema for (set them over the control API).
+# `state.dataDir` below is required for `bridge`.
+env:
+  - name: HEMNET_TRANSPORT
+    required: false
+    help: >-
+      Selects the transport used to reach the site (e.g. the fetchproxy bridge
+      vs a direct fetch). Leave unset for the default.
+  - name: HEMNET_WS_PORT
+    required: false
+    help: >-
+      Concentrator port for the fetchproxy browser bridge (defaults to the
+      fleet-shared 37149). The runner injects a per-registration port for a
+      hosted bridged child, so this is the name to give bridgePortEnv at
+      registration.
+state:
+  dataDir: true
+  reason: >-
+    The fetchproxy identity lives at $HOME/.fetchproxy/identity/<name>.json
+    and the pair code derives from it. Without a persistent $HOME every cold
+    start mints a fresh identity and re-prompts pairing in the browser; the
+    API refuses bridge without it.
+egress:
+  allow:
+    # Only hosts the SERVER process actually fetches. Hosts that appear
+    # solely in a URL this server BUILDS and returns are excluded.
+    - hemnet.se
+    - www.hemnet.se
