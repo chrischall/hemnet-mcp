@@ -1,6 +1,6 @@
 {
   "name": "hemnet-mcp",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "license": "MIT",
   "mcpName": "io.github.chrischall/hemnet-mcp",
   "description": "Hemnet.se MCP server for Claude — developed and maintained by AI (Claude Code)",

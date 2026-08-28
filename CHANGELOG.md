@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/chrischall/hemnet-mcp/compare/v0.3.2...v0.3.3) (2026-08-28)
+
+
+### Bug Fixes
+
+* **egress:** declare only the hosts the server process dials in mint.yaml ([#41](https://github.com/chrischall/hemnet-mcp/issues/41)) ([71028dd](https://github.com/chrischall/hemnet-mcp/commit/71028dd4e569c6d9308de281ae85ecc1a77acd7b))
+
 ## [0.3.2](https://github.com/chrischall/hemnet-mcp/compare/v0.3.1...v0.3.2) (2026-08-06)
 
 
