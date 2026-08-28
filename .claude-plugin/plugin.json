@@ -1,7 +1,7 @@
 {
   "name": "hemnet",
   "displayName": "Hemnet",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Hemnet.se real estate tools for Claude — search, sold prices, listings, and market stats via MCP",
   "author": {
     "name": "Chris Chall"
