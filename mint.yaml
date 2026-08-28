@@ -35,5 +35,13 @@ egress:
   allow:
     # Only hosts the SERVER process actually fetches. Hosts that appear
     # solely in a URL this server BUILDS and returns are excluded.
-    - hemnet.se
+    #
+    # HEMNET_TRANSPORT=direct (and the first attempt of the default
+    # `auto`) POSTs https://www.hemnet.se/graphql from the process
+    # (src/transport-direct.ts); no redirect hop is followed from there.
+    # HEMNET_TRANSPORT=fetchproxy (and `auto` once walled) dials NOTHING:
+    # the request runs inside the user's tab and the process only listens
+    # on the loopback concentrator port. The apex `hemnet.se` is never
+    # requested (the code names only www), and `bilder.hemnet.se` appears
+    # solely in returned photo URLs.
     - www.hemnet.se
