@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/chrischall/hemnet-mcp/compare/v0.3.3...v0.4.0) (2026-08-29)
+
+
+### Features
+
+* **deps:** take @fetchproxy/server 2.2.0 so the concentrator can bind its sandbox address ([#43](https://github.com/chrischall/hemnet-mcp/issues/43)) ([0a9b7cb](https://github.com/chrischall/hemnet-mcp/commit/0a9b7cbed09ddfb7abf44a9cb3fe1a4fed40acac))
+
 ## [0.3.3](https://github.com/chrischall/hemnet-mcp/compare/v0.3.2...v0.3.3) (2026-08-28)
 
 
