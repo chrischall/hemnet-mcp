@@ -44,6 +44,17 @@ async function runHealthcheck(transport: HemnetTransport): Promise<HealthcheckBo
   }
 }
 
+describe('hemnet_healthcheck probe', () => {
+  it('fails a 200 with zero autocomplete hits instead of calling it healthy (#56)', async () => {
+    const body = await runHealthcheck({
+      ...fakeTransport(() => ({ data: { autocompleteLocations: { hits: [] } } })),
+      status: () => ({ transport: 'direct', mode: 'auto' }),
+    });
+    expect(body.ok).toBe(false);
+    expect(body.error?.message).toMatch(/returned 0 hits/);
+  });
+});
+
 describe('hemnet_healthcheck on the direct path', () => {
   it('reports ok with the direct path, the probe status, and no bridge block', async () => {
     const body = await runHealthcheck({
@@ -174,6 +185,27 @@ describe('hemnet_healthcheck on the fetchproxy path', () => {
     expect(body.transport).toEqual({ transport: 'fetchproxy', mode: 'fetchproxy' });
     expect(body.bridge?.session_state).toBe('no_session');
     expect(body.hint).toMatch(/never confirmed a session/);
+  });
+
+  it('classifies the bridge leg\'s non-JSON challenge page as cloudflare_challenge (#56)', async () => {
+    const bridge = fakeBridge({
+      fetch: async () => ({ status: 200, body: '<!DOCTYPE html><title>Just a moment...</title>', url: 'u' }),
+    });
+    const body = await runHealthcheck(new HemnetFetchproxyTransport({ bridge }));
+    expect(body.ok).toBe(false);
+    expect(body.error?.kind).toBe('cloudflare_challenge');
+    expect(body.error?.message).toMatch(/non-JSON via the browser bridge/);
+    expect(body.hint).toMatch(/HEMNET_TRANSPORT=fetchproxy/);
+  });
+
+  it('files the bridge leg\'s non-2xx as http, not unknown (#56)', async () => {
+    const bridge = fakeBridge({
+      fetch: async () => ({ status: 502, body: 'bad gateway', url: 'u' }),
+    });
+    const body = await runHealthcheck(new HemnetFetchproxyTransport({ bridge }));
+    expect(body.ok).toBe(false);
+    expect(body.error?.kind).toBe('http');
+    expect(body.error?.message).toMatch(/HTTP 502 via browser bridge/);
   });
 
   it('keeps the default classification when the wrapped cause is not a fetchproxy error', async () => {
