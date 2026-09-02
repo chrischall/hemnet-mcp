@@ -5,6 +5,7 @@ import {
 } from '@chrischall/mcp-utils/fetchproxy';
 import type { HemnetClient } from '../client.js';
 import { CloudflareChallengeError } from '../transport-direct.js';
+import { BridgeHttpStatusError } from '../transport-fetchproxy.js';
 
 /**
  * `hemnet_healthcheck` — one-call end-to-end probe of the Hemnet GraphQL
@@ -76,9 +77,9 @@ function classifyThrown(
   if (cause instanceof CloudflareChallengeError) {
     return { kind: 'cloudflare_challenge', hint: CLOUDFLARE_HINT };
   }
-  // The bridge leg's non-2xx is a plain Error (an upstream HTTP status,
-  // not a bridge fault) — file it as `http` rather than `unknown`.
-  if (err instanceof Error && /^Hemnet GraphQL HTTP \d+ via browser bridge/.test(err.message)) {
+  // The bridge leg's non-2xx carries a typed cause (an upstream HTTP
+  // status, not a bridge fault) — file it as `http` rather than `unknown`.
+  if (cause instanceof BridgeHttpStatusError) {
     return { kind: 'http' };
   }
   if (cause === undefined) return undefined;

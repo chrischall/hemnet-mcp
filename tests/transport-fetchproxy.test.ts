@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { FetchproxyBridgeDownError } from '@chrischall/mcp-utils/fetchproxy';
-import { HemnetFetchproxyTransport } from '../src/transport-fetchproxy.js';
+import { HemnetFetchproxyTransport, BridgeHttpStatusError } from '../src/transport-fetchproxy.js';
 import { CloudflareChallengeError } from '../src/transport-direct.js';
 import { fakeBridge, fakeBridgeHealth } from './helpers.js';
 
@@ -48,6 +48,9 @@ describe('HemnetFetchproxyTransport', () => {
     const err = await t.graphql('q', {}).catch((e: unknown) => e);
     expect((err as Error).message).toContain('HTTP 500');
     expect((err as Error).message).toContain('upstream broke');
+    // Typed for the healthcheck's classifier: the status rides as `cause`.
+    expect((err as Error).cause).toBeInstanceOf(BridgeHttpStatusError);
+    expect(((err as Error).cause as BridgeHttpStatusError).status).toBe(500);
   });
 
   it('flags a non-JSON 2xx as a likely challenge interstitial', async () => {

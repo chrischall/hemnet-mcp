@@ -26,7 +26,7 @@ export { HemnetClient, DEFAULT_PHOTO_LIMIT } from './client.js';
 export type { HemnetClientOptions, SearchOptions } from './client.js';
 export { DirectTransport, CloudflareChallengeError } from './transport-direct.js';
 export type { DirectTransportOptions } from './transport-direct.js';
-export { HemnetFetchproxyTransport } from './transport-fetchproxy.js';
+export { HemnetFetchproxyTransport, BridgeHttpStatusError } from './transport-fetchproxy.js';
 export type {
   FetchproxyTransportOptions,
   HemnetBridge,
