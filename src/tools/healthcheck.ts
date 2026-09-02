@@ -24,7 +24,7 @@ export function registerHealthcheckTools(
     {
       title: 'Verify the Hemnet GraphQL endpoint',
       description:
-        'Round-trips a tiny query to hemnet.se GraphQL and reports whether the endpoint is reachable, the elapsed time, and a hint. Read-only, no auth.',
+        'Round-trips a tiny query to hemnet.se GraphQL and reports whether the endpoint is reachable, the elapsed time, which transport served it (direct fetch or the fetchproxy browser bridge, with the bridge role/port), and a hint. Read-only, no auth.',
       annotations: {
         title: 'Verify the Hemnet GraphQL endpoint',
         readOnlyHint: true,
@@ -35,12 +35,21 @@ export function registerHealthcheckTools(
     },
     async () => {
       const start = Date.now();
+      // Read AFTER the probe: on the default auto transport the probe is
+      // what flips the fallback, and on the bridge `role` only becomes
+      // non-null once the extension has linked — so this is the path the
+      // probe actually took, not the one it started on.
+      const transportOf = () => {
+        const transport = client.transportStatus();
+        return transport ? { transport } : {};
+      };
       try {
         const result = await client.healthcheck();
         return textResult({
           ok: true,
           elapsed_ms: Date.now() - start,
           hits: result.hits,
+          ...transportOf(),
           hint: 'Hemnet GraphQL endpoint is reachable and responding.',
         });
       } catch (err) {
@@ -54,6 +63,7 @@ export function registerHealthcheckTools(
           ok: false,
           elapsed_ms: Date.now() - start,
           error,
+          ...transportOf(),
           hint: walled
             ? 'Hemnet is serving a Cloudflare bot challenge. Set HEMNET_TRANSPORT=fetchproxy (or leave it at the default "auto"), keep a www.hemnet.se tab open (no login needed), and approve the Transporter pairing prompt if one appears.'
             : 'Hemnet GraphQL did not respond. Check network reachability; the endpoint or a queried field may have changed.',

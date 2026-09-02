@@ -121,3 +121,36 @@ describe('HemnetFetchproxyTransport', () => {
     expect(t).toBeInstanceOf(HemnetFetchproxyTransport);
   });
 });
+
+describe('HemnetFetchproxyTransport.status', () => {
+  it('reports the bridge role, port and extension liveness when the bridge exposes them', () => {
+    const bridge = fakeBridge({
+      status: () => ({ role: 'host', port: 37150, lastExtensionMessageAt: 1_756_850_000_000 }),
+    });
+    const t = new HemnetFetchproxyTransport({ bridge });
+    expect(t.status()).toEqual({
+      transport: 'fetchproxy',
+      mode: 'fetchproxy',
+      bridge: {
+        role: 'host',
+        port: 37150,
+        last_extension_message_at: '2025-09-02T21:53:20.000Z',
+      },
+    });
+  });
+
+  it('reports a bridge the extension never spoke to as last_extension_message_at: null', () => {
+    const bridge = fakeBridge({
+      status: () => ({ role: 'host', port: 37150, lastExtensionMessageAt: null }),
+    });
+    const t = new HemnetFetchproxyTransport({ bridge });
+    expect(t.status()).toMatchObject({
+      bridge: { role: 'host', port: 37150, last_extension_message_at: null },
+    });
+  });
+
+  it('omits the bridge block when the bridge has no status', () => {
+    const t = new HemnetFetchproxyTransport({ bridge: fakeBridge() });
+    expect(t.status()).toEqual({ transport: 'fetchproxy', mode: 'fetchproxy' });
+  });
+});

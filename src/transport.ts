@@ -22,6 +22,28 @@ export interface GraphQLResponse<T> {
   errors?: { message: string }[];
 }
 
+/**
+ * Which path a transport is serving on. Surfaced by `hemnet_healthcheck`
+ * so a failure isolates to the right leg: `transport` is the path the
+ * next request rides, `mode` is the configured `HEMNET_TRANSPORT`, and
+ * `bridge` (fetchproxy only) is the bridge's live state: `role` is the
+ * port election (`host` bound the fleet port, `peer` joined another
+ * server's, `null` never listened), and `last_extension_message_at` is
+ * the last time the Transporter extension spoke to THIS bridge — `null`
+ * means the port was bound but the extension never linked, which is the
+ * "no confirmed browser session" shape and the one a bare error can't
+ * tell apart from a wall change or a network fault.
+ */
+export interface TransportStatus {
+  transport: 'direct' | 'fetchproxy' | 'unknown';
+  mode: 'direct' | 'fetchproxy' | 'auto';
+  bridge?: {
+    role: 'host' | 'peer' | null;
+    port: number;
+    last_extension_message_at: string | null;
+  };
+}
+
 export interface HemnetTransport {
   /**
    * Execute one GraphQL operation and return the raw `{ data, errors }`
@@ -34,4 +56,10 @@ export interface HemnetTransport {
     query: string,
     variables: Record<string, unknown>,
   ): Promise<GraphQLResponse<T>>;
+  /**
+   * Optional: report which path this transport serves on (see
+   * {@link TransportStatus}). Consumers supplying their own fetcher may
+   * omit it; the healthcheck then omits its `transport` field.
+   */
+  status?(): TransportStatus;
 }

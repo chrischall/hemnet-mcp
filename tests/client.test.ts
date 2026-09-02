@@ -109,3 +109,20 @@ describe('HemnetClient constructor', () => {
     expect(client).toBeInstanceOf(HemnetClient);
   });
 });
+
+describe('HemnetClient.transportStatus', () => {
+  it('returns the transport status when the transport reports one', () => {
+    const client = new HemnetClient({
+      transport: {
+        graphql: async () => ({ data: null }),
+        status: () => ({ transport: 'direct', mode: 'auto' }),
+      },
+    });
+    expect(client.transportStatus()).toEqual({ transport: 'direct', mode: 'auto' });
+  });
+
+  it('returns undefined for a transport without status()', () => {
+    const client = fakeClient(() => ({ data: null }));
+    expect(client.transportStatus()).toBeUndefined();
+  });
+});

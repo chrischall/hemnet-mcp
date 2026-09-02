@@ -186,3 +186,10 @@ describe('DirectTransport', () => {
     expect(new DirectTransport()).toBeInstanceOf(DirectTransport);
   });
 });
+
+describe('DirectTransport.status', () => {
+  it('reports the direct path', () => {
+    const t = new DirectTransport();
+    expect(t.status()).toEqual({ transport: 'direct', mode: 'direct' });
+  });
+});
