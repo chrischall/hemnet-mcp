@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { FetchproxyBridgeDownError } from '@chrischall/mcp-utils/fetchproxy';
 import { HemnetFetchproxyTransport } from '../src/transport-fetchproxy.js';
+import { CloudflareChallengeError } from '../src/transport-direct.js';
 import { fakeBridge, fakeBridgeHealth } from './helpers.js';
 
 describe('HemnetFetchproxyTransport', () => {
@@ -61,6 +62,8 @@ describe('HemnetFetchproxyTransport', () => {
     const err = await t.graphql('q', {}).catch((e: unknown) => e);
     expect((err as Error).message).toContain('non-JSON');
     expect((err as Error).message).toContain('hemnet.se');
+    // Typed for the healthcheck's classifier.
+    expect((err as Error).cause).toBeInstanceOf(CloudflareChallengeError);
   });
 
   it('wraps a plain bridge-layer failure (no hint) with the prefix', async () => {
