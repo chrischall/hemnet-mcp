@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.0](https://github.com/chrischall/hemnet-mcp/compare/v0.4.0...v0.5.0) (2026-09-02)
+
+
+### Features
+
+* **healthcheck:** adopt the shared bridge healthcheck and report the extension link state ([#55](https://github.com/chrischall/hemnet-mcp/issues/55)) ([aa04a67](https://github.com/chrischall/hemnet-mcp/commit/aa04a676185bef682d08ca8092c2f95a11e328b4))
+* **healthcheck:** report which transport served the probe and the bridge state ([#53](https://github.com/chrischall/hemnet-mcp/issues/53)) ([50db3df](https://github.com/chrischall/hemnet-mcp/commit/50db3df2082fc7b642e4714721c73b50e74033a3))
+
+
+### Bug Fixes
+
+* **healthcheck:** classify the bridge leg's challenge page and HTTP failures, and fail a zero-hit probe ([#57](https://github.com/chrischall/hemnet-mcp/issues/57)) ([1eaa143](https://github.com/chrischall/hemnet-mcp/commit/1eaa1438f68e1a9d8d3d427b01d9dbe9eb184efd))
+* **healthcheck:** type the bridge leg's HTTP failure instead of matching its message ([#59](https://github.com/chrischall/hemnet-mcp/issues/59)) ([54589f1](https://github.com/chrischall/hemnet-mcp/commit/54589f10be573709554ed79ffb505bce626311e9))
+
 ## [0.4.0](https://github.com/chrischall/hemnet-mcp/compare/v0.3.3...v0.4.0) (2026-08-29)
 
 
