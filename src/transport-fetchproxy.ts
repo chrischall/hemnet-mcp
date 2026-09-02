@@ -22,6 +22,7 @@
 import {
   bridgeErrorInfo,
   createFetchproxyTransport,
+  type BridgeHealthcheckTransport,
   type FetchproxyFetchInit,
   type FetchproxyServer,
   type FetchproxyServerOpts,
@@ -43,21 +44,18 @@ const DEFAULT_WS_PORT = 37_149;
 /**
  * The minimal slice of `FetchproxyTransport` this adapter drives —
  * narrow so tests can fake it without modelling the whole verb surface.
- * The real `createFetchproxyTransport` return value satisfies it.
+ * The real `createFetchproxyTransport` return value satisfies it. It
+ * includes the {@link BridgeHealthcheckTransport} slice (`runProbe` +
+ * `status`) because {@link HemnetFetchproxyTransport.bridgeTransport}
+ * hands the bridge straight to the shared `hemnet_healthcheck`.
  */
-export interface HemnetBridge {
+export interface HemnetBridge extends BridgeHealthcheckTransport {
   /** Load identity and prepare the bridge (lazy — binds nothing). */
   start(): Promise<void>;
   /** One same-origin fetch inside the paired tab. */
   fetch(
     init: FetchproxyFetchInit,
   ): Promise<{ status: number; body: string; url?: string }>;
-  /** Live bridge state (`bridgeHealth()`); optional for fakes. */
-  status?(): {
-    role: 'host' | 'peer' | null;
-    port: number;
-    lastExtensionMessageAt: number | null;
-  };
 }
 
 export interface FetchproxyTransportOptions {
@@ -113,23 +111,12 @@ export class HemnetFetchproxyTransport implements HemnetTransport {
   }
 
   status(): TransportStatus {
-    const health = this.bridge.status?.();
-    return {
-      transport: 'fetchproxy',
-      mode: 'fetchproxy',
-      ...(health
-        ? {
-            bridge: {
-              role: health.role,
-              port: health.port,
-              last_extension_message_at:
-                health.lastExtensionMessageAt === null
-                  ? null
-                  : new Date(health.lastExtensionMessageAt).toISOString(),
-            },
-          }
-        : {}),
-    };
+    return { transport: 'fetchproxy', mode: 'fetchproxy' };
+  }
+
+  /** The bridge itself, for the shared healthcheck's status projection. */
+  bridgeTransport(): BridgeHealthcheckTransport {
+    return this.bridge;
   }
 
   async graphql<T>(
@@ -151,9 +138,12 @@ export class HemnetFetchproxyTransport implements HemnetTransport {
     } catch (err) {
       // Bridge-layer failures (extension down, pairing pending, timeout)
       // get the typed error's remediation hint instead of a bare message.
+      // The typed error rides along as `cause` so `hemnet_healthcheck` can
+      // still classify the kind (session_not_ready / bridge_down / …).
       const info = bridgeErrorInfo(err);
       throw new Error(
         `Hemnet bridge: ${info.message}${info.hint ? ` ${info.hint}` : ''}`,
+        { cause: err },
       );
     }
     if (result.status < 200 || result.status >= 300) {

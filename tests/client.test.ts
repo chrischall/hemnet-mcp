@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { HemnetClient } from '../src/client.js';
-import { fakeClient } from './helpers.js';
+import { fakeClient, fakeBridgeTransport } from './helpers.js';
 import { LISTING_DETAIL, SOLD_DETAIL, LOCATION_HIT, LISTING_CARD, SALE_CARD } from './fixtures.js';
 
 describe('HemnetClient.run error handling', () => {
@@ -124,5 +124,23 @@ describe('HemnetClient.transportStatus', () => {
   it('returns undefined for a transport without status()', () => {
     const client = fakeClient(() => ({ data: null }));
     expect(client.transportStatus()).toBeUndefined();
+  });
+});
+
+describe('HemnetClient.bridgeTransport', () => {
+  it('returns the bridge transport when the transport exposes one', () => {
+    const bridgeTransport = fakeBridgeTransport();
+    const client = new HemnetClient({
+      transport: {
+        graphql: async () => ({ data: null }),
+        bridgeTransport: () => bridgeTransport,
+      },
+    });
+    expect(client.bridgeTransport()).toBe(bridgeTransport);
+  });
+
+  it('returns undefined for a transport without bridgeTransport()', () => {
+    const client = fakeClient(() => ({ data: null }));
+    expect(client.bridgeTransport()).toBeUndefined();
   });
 });

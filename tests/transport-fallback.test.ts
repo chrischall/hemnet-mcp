@@ -6,6 +6,7 @@ import {
   createDefaultTransport,
 } from '../src/transport-fallback.js';
 import type { HemnetTransport } from '../src/transport.js';
+import { fakeBridgeTransport } from './helpers.js';
 
 function transportReturning(data: unknown): HemnetTransport {
   return { graphql: vi.fn(async () => ({ data })) } as HemnetTransport;
@@ -121,20 +122,39 @@ describe('FallbackTransport.status', () => {
       status: () => ({
         transport: 'fetchproxy' as const,
         mode: 'fetchproxy' as const,
-        bridge: { role: null, port: 37150, last_extension_message_at: null },
       }),
     };
     const t = new FallbackTransport(direct, () => bridge);
     await t.graphql('q', {});
-    expect(t.status()).toEqual({
-      transport: 'fetchproxy',
-      mode: 'auto',
-      bridge: { role: null, port: 37150, last_extension_message_at: null },
-    });
+    expect(t.status()).toEqual({ transport: 'fetchproxy', mode: 'auto' });
   });
 
   it('reports unknown paths when a transport has no status()', () => {
     const t = new FallbackTransport(transportReturning({ ok: 1 }), vi.fn());
     expect(t.status()).toEqual({ transport: 'unknown', mode: 'auto' });
+  });
+});
+
+describe('FallbackTransport.bridgeTransport', () => {
+  it('is undefined until a challenge builds the bridge, then the bridge\'s own', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const direct = transportThrowing(new CloudflareChallengeError('walled'));
+    const bridgeTransport = fakeBridgeTransport();
+    const bridge = {
+      ...transportReturning({ via: 'bridge' }),
+      bridgeTransport: () => bridgeTransport,
+    };
+    const t = new FallbackTransport(direct, () => bridge);
+    expect(t.bridgeTransport()).toBeUndefined();
+    await t.graphql('q', {});
+    expect(t.bridgeTransport()).toBe(bridgeTransport);
+  });
+
+  it('is undefined when the built bridge does not expose one', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const direct = transportThrowing(new CloudflareChallengeError('walled'));
+    const t = new FallbackTransport(direct, () => transportReturning({ via: 'bridge' }));
+    await t.graphql('q', {});
+    expect(t.bridgeTransport()).toBeUndefined();
   });
 });

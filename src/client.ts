@@ -20,6 +20,7 @@ import {
   redactSecrets,
   truncateErrorMessage,
 } from '@chrischall/mcp-utils';
+import type { BridgeHealthcheckTransport } from '@chrischall/mcp-utils/fetchproxy';
 import type { HemnetTransport, TransportStatus } from './transport.js';
 import {
   AUTOCOMPLETE_LOCATIONS,
@@ -171,5 +172,14 @@ export class HemnetClient {
    */
   transportStatus(): TransportStatus | undefined {
     return this.transport.status?.();
+  }
+
+  /**
+   * The live fetchproxy bridge, if one exists yet — `undefined` on the
+   * direct path and before the fallback has switched. `hemnet_healthcheck`
+   * projects the bridge role / port / extension-link state from it.
+   */
+  bridgeTransport(): BridgeHealthcheckTransport | undefined {
+    return this.transport.bridgeTransport?.();
   }
 }

@@ -16,6 +16,8 @@
  * transport/client split (see homes-mcp's HomesTransport).
  */
 
+import type { BridgeHealthcheckTransport } from '@chrischall/mcp-utils/fetchproxy';
+
 /** The GraphQL response envelope: exactly one of `data` / `errors` is meaningful. */
 export interface GraphQLResponse<T> {
   data?: T | null;
@@ -24,25 +26,19 @@ export interface GraphQLResponse<T> {
 
 /**
  * Which path a transport is serving on. Surfaced by `hemnet_healthcheck`
- * so a failure isolates to the right leg: `transport` is the path the
- * next request rides, `mode` is the configured `HEMNET_TRANSPORT`, and
- * `bridge` (fetchproxy only) is the bridge's live state: `role` is the
- * port election (`host` bound the fleet port, `peer` joined another
- * server's, `null` never listened), and `last_extension_message_at` is
- * the last time the Transporter extension spoke to THIS bridge — `null`
- * means the port was bound but the extension never linked, which is the
- * "no confirmed browser session" shape and the one a bare error can't
- * tell apart from a wall change or a network fault.
+ * (as its `transport` field) so a failure isolates to the right leg:
+ * `transport` is the path the next request rides, `mode` is the
+ * configured `HEMNET_TRANSPORT`. The bridge's own live state (role, port,
+ * extension link) is not duplicated here — the healthcheck projects it
+ * from {@link HemnetTransport.bridgeTransport} once a bridge exists.
+ *
+ * A `type` alias (not an interface) so it is assignable to mcp-utils'
+ * index-signatured `HealthcheckPath` without a cast.
  */
-export interface TransportStatus {
+export type TransportStatus = {
   transport: 'direct' | 'fetchproxy' | 'unknown';
   mode: 'direct' | 'fetchproxy' | 'auto';
-  bridge?: {
-    role: 'host' | 'peer' | null;
-    port: number;
-    last_extension_message_at: string | null;
-  };
-}
+};
 
 export interface HemnetTransport {
   /**
@@ -62,4 +58,11 @@ export interface HemnetTransport {
    * omit it; the healthcheck then omits its `transport` field.
    */
   status?(): TransportStatus;
+  /**
+   * Optional: the live fetchproxy bridge (`runProbe` + `status`), for the
+   * shared bridge healthcheck to project role / port / extension-link
+   * state from. `undefined` while no bridge exists — on the direct path,
+   * or on the default fallback before a Cloudflare challenge builds one.
+   */
+  bridgeTransport?(): BridgeHealthcheckTransport | undefined;
 }
