@@ -58,7 +58,7 @@ local math).
 | `hemnet_compare_listings` | `tools/compare.ts` | concurrent `listing(id)` | read |
 | `hemnet_get_by_address` | `tools/by-address.ts` | autocomplete → search → `addressMatch` | read |
 | `hemnet_calculate_mortgage` | `tools/mortgage.ts` | local (`src/mortgage.ts`) | read |
-| `hemnet_healthcheck` | `tools/healthcheck.ts` | tiny `autocompleteLocations` probe | read |
+| `hemnet_healthcheck` | `tools/healthcheck.ts` | `registerBridgeHealthcheckTool` (mcp-utils) over the client's tiny `autocompleteLocations` probe | read |
 
 ## Architecture
 
@@ -99,7 +99,16 @@ tests/                  # 1:1 mirror of src/. FakeTransport (helpers.ts) drives
 ```
 
 Each `tools/*.ts` exports `registerXTools(server, client)` (or `(server)`
-for the local-only mortgage tool). `registerHemnetTools` in
+for the local-only mortgage tool). `hemnet_healthcheck` is the fleet's
+shared `registerBridgeHealthcheckTool` in its direct-first shape: the
+probe is `client.healthcheck()`, `path` is `client.transportStatus()`
+(reported as `transport: { transport, mode }`), and `transport` is the
+`client.bridgeTransport()` getter — `undefined` until the fallback has
+built a bridge, after which the result carries a `bridge` block (role,
+port, `session_state`, `pending_pair_code`, …). `CloudflareChallengeError`
+is classified as `error.kind: 'cloudflare_challenge'`; bridge failures
+keep their fetchproxy kind (`session_not_ready`, `bridge_down`, …) via the
+`cause` transport-fetchproxy.ts attaches. `registerHemnetTools` in
 `tools/index.ts` wires them all up; `index.ts` and realty-meta both call
 it.
 

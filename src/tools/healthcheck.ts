@@ -1,74 +1,67 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { messageOf } from '@chrischall/mcp-utils';
+import {
+  classifyBridgeError,
+  registerBridgeHealthcheckTool,
+} from '@chrischall/mcp-utils/fetchproxy';
 import type { HemnetClient } from '../client.js';
-import { textResult } from '../mcp.js';
+import { CloudflareChallengeError } from '../transport-direct.js';
 
 /**
  * `hemnet_healthcheck` — one-call end-to-end probe of the Hemnet GraphQL
- * endpoint.
+ * endpoint, built on the fleet's shared bridge healthcheck
+ * (`registerBridgeHealthcheckTool`) in its direct-first shape.
  *
- * Runs a tiny autocomplete round-trip and reports `ok`, the elapsed ms,
- * and a plain-English hint. Because the round-trip goes through the same
- * transport the tools use — the default direct fetch with browser-bridge
- * fallback (see transport-fallback.ts) — a failure isolates cleanly to
- * network reachability, Hemnet's Cloudflare wall, or a Hemnet-side change.
- * Call it when a real tool errors and you want to know whether the
- * endpoint is up and which path is in play.
+ * The probe is the client's tiny autocomplete round-trip, so it rides the
+ * same transport the tools use — the default direct fetch with
+ * browser-bridge fallback (see transport-fallback.ts). The result carries
+ * `transport` (which leg served the probe + the configured
+ * `HEMNET_TRANSPORT`), and once a bridge exists a `bridge` block with its
+ * role / port / extension-link state (`session_state`,
+ * `pending_pair_code`), plus a classified `error.kind` and a hint on
+ * failure — so a failure isolates cleanly to network reachability,
+ * Hemnet's Cloudflare wall, a bridge that never linked, or a Hemnet-side
+ * change. Both `transport` and the bridge are read AFTER the probe: on
+ * the default auto transport the probe itself is what flips the fallback.
  */
 export function registerHealthcheckTools(
   server: McpServer,
   client: HemnetClient,
 ): void {
-  server.registerTool(
-    'hemnet_healthcheck',
-    {
-      title: 'Verify the Hemnet GraphQL endpoint',
-      description:
-        'Round-trips a tiny query to hemnet.se GraphQL and reports whether the endpoint is reachable, the elapsed time, which transport served it (direct fetch or the fetchproxy browser bridge, with the bridge role/port), and a hint. Read-only, no auth.',
-      annotations: {
-        title: 'Verify the Hemnet GraphQL endpoint',
-        readOnlyHint: true,
-        idempotentHint: true,
-        openWorldHint: true,
-      },
-      inputSchema: {},
-    },
-    async () => {
-      const start = Date.now();
-      // Read AFTER the probe: on the default auto transport the probe is
-      // what flips the fallback, and on the bridge `role` only becomes
-      // non-null once the extension has linked — so this is the path the
-      // probe actually took, not the one it started on.
-      const transportOf = () => {
-        const transport = client.transportStatus();
-        return transport ? { transport } : {};
-      };
-      try {
-        const result = await client.healthcheck();
-        return textResult({
-          ok: true,
-          elapsed_ms: Date.now() - start,
-          hits: result.hits,
-          ...transportOf(),
-          hint: 'Hemnet GraphQL endpoint is reachable and responding.',
-        });
-      } catch (err) {
-        const error = messageOf(err);
-        // Any Cloudflare-challenge or bridge-path failure gets the
-        // browser-bridge remediation hint. `bridge` covers both the
-        // "Hemnet bridge: …" wrapper (transport-fetchproxy.ts) and the
-        // "… via browser bridge" HTTP/non-JSON messages.
-        const walled = /Cloudflare|non-JSON|bridge/i.test(error);
-        return textResult({
-          ok: false,
-          elapsed_ms: Date.now() - start,
-          error,
-          ...transportOf(),
-          hint: walled
-            ? 'Hemnet is serving a Cloudflare bot challenge. Set HEMNET_TRANSPORT=fetchproxy (or leave it at the default "auto"), keep a www.hemnet.se tab open (no login needed), and approve the Transporter pairing prompt if one appears.'
-            : 'Hemnet GraphQL did not respond. Check network reachability; the endpoint or a queried field may have changed.',
-        });
-      }
-    },
-  );
+  registerBridgeHealthcheckTool({
+    server,
+    prefix: 'hemnet',
+    probePath: '/graphql',
+    hostLabel: 'www.hemnet.se',
+    transport: () => client.bridgeTransport(),
+    path: () => client.transportStatus() ?? { transport: 'unknown', mode: 'auto' },
+    probeFn: async () => JSON.stringify(await client.healthcheck()),
+    classifyThrown,
+  });
+}
+
+const CLOUDFLARE_HINT =
+  'Hemnet is serving a Cloudflare bot challenge. Set HEMNET_TRANSPORT=fetchproxy (or leave it at the default "auto"), keep a www.hemnet.se tab open (no login needed), and approve the Transporter pairing prompt if one appears.';
+
+/**
+ * Site-specific classification of the probe's throw. Two cases the shared
+ * ladder can't see on its own:
+ *
+ *   - a `CloudflareChallengeError` from the direct transport (only reaches
+ *     here under `HEMNET_TRANSPORT=direct`; `auto` falls back instead) →
+ *     `cloudflare_challenge` with the browser-bridge remediation;
+ *   - a bridge failure, which transport-fetchproxy.ts re-throws as a
+ *     prefixed plain `Error` with the typed fetchproxy error as `cause` —
+ *     classify the cause so `session_not_ready` / `bridge_down` / `timeout`
+ *     keep their kinds (and their hint-ladder arms) instead of `unknown`.
+ */
+function classifyThrown(
+  err: unknown,
+): { kind: string; hint?: string } | undefined {
+  if (err instanceof CloudflareChallengeError) {
+    return { kind: 'cloudflare_challenge', hint: CLOUDFLARE_HINT };
+  }
+  const cause = err instanceof Error ? err.cause : undefined;
+  if (cause === undefined) return undefined;
+  const kind = classifyBridgeError(cause);
+  return kind === 'other' ? undefined : { kind };
 }

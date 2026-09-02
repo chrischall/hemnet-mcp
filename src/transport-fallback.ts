@@ -15,6 +15,7 @@
  * `fetchproxy` (always ride the tab), `auto` (this fallback — default).
  */
 import { readEnvVar } from '@chrischall/mcp-utils';
+import type { BridgeHealthcheckTransport } from '@chrischall/mcp-utils/fetchproxy';
 import type {
   GraphQLResponse,
   HemnetTransport,
@@ -64,6 +65,11 @@ export class FallbackTransport implements HemnetTransport {
     const active = this.bridge ?? this.direct;
     const inner = active.status?.() ?? { transport: 'unknown' as const };
     return { ...inner, mode: 'auto' };
+  }
+
+  /** The bridge once the fallback has built it; `undefined` while direct. */
+  bridgeTransport(): BridgeHealthcheckTransport | undefined {
+    return this.bridge?.bridgeTransport?.();
   }
 }
 

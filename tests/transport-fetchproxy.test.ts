@@ -1,22 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { FetchproxyBridgeDownError } from '@chrischall/mcp-utils/fetchproxy';
-import {
-  HemnetFetchproxyTransport,
-  type HemnetBridge,
-} from '../src/transport-fetchproxy.js';
-
-/** A controllable fake of the minimal bridge surface the transport uses. */
-function fakeBridge(overrides: Partial<HemnetBridge> = {}): HemnetBridge {
-  return {
-    start: vi.fn(async () => {}),
-    fetch: vi.fn(async () => ({
-      status: 200,
-      body: JSON.stringify({ data: { ok: true } }),
-      url: 'https://www.hemnet.se/graphql',
-    })),
-    ...overrides,
-  };
-}
+import { HemnetFetchproxyTransport } from '../src/transport-fetchproxy.js';
+import { fakeBridge, fakeBridgeHealth } from './helpers.js';
 
 describe('HemnetFetchproxyTransport', () => {
   it('POSTs the operation through the bridge and returns the envelope', async () => {
@@ -90,16 +75,19 @@ describe('HemnetFetchproxyTransport', () => {
     );
   });
 
-  it('appends the remediation hint for a typed bridge error', async () => {
+  it('appends the remediation hint for a typed bridge error and keeps it as cause', async () => {
+    const original = new FetchproxyBridgeDownError('bridge down');
     const bridge = fakeBridge({
       fetch: vi.fn(async () => {
-        throw new FetchproxyBridgeDownError('bridge down');
+        throw original;
       }),
     });
     const t = new HemnetFetchproxyTransport({ bridge });
     const err = await t.graphql('q', {}).catch((e: unknown) => e);
     expect((err as Error).message).toContain('Hemnet bridge:');
     expect((err as Error).message).toMatch(/service worker|tab for this domain/);
+    // The typed error survives as `cause` so a healthcheck can classify it.
+    expect((err as Error).cause).toBe(original);
   });
 
   it('constructs the real fetchproxy transport by default', () => {
@@ -122,35 +110,17 @@ describe('HemnetFetchproxyTransport', () => {
   });
 });
 
-describe('HemnetFetchproxyTransport.status', () => {
-  it('reports the bridge role, port and extension liveness when the bridge exposes them', () => {
-    const bridge = fakeBridge({
-      status: () => ({ role: 'host', port: 37150, lastExtensionMessageAt: 1_756_850_000_000 }),
-    });
-    const t = new HemnetFetchproxyTransport({ bridge });
-    expect(t.status()).toEqual({
-      transport: 'fetchproxy',
-      mode: 'fetchproxy',
-      bridge: {
-        role: 'host',
-        port: 37150,
-        last_extension_message_at: '2025-09-02T21:53:20.000Z',
-      },
-    });
-  });
-
-  it('reports a bridge the extension never spoke to as last_extension_message_at: null', () => {
-    const bridge = fakeBridge({
-      status: () => ({ role: 'host', port: 37150, lastExtensionMessageAt: null }),
-    });
-    const t = new HemnetFetchproxyTransport({ bridge });
-    expect(t.status()).toMatchObject({
-      bridge: { role: 'host', port: 37150, last_extension_message_at: null },
-    });
-  });
-
-  it('omits the bridge block when the bridge has no status', () => {
+describe('HemnetFetchproxyTransport.status / bridgeTransport', () => {
+  it('reports the fetchproxy path; the bridge state itself comes from bridgeTransport()', () => {
     const t = new HemnetFetchproxyTransport({ bridge: fakeBridge() });
     expect(t.status()).toEqual({ transport: 'fetchproxy', mode: 'fetchproxy' });
+  });
+
+  it('exposes the underlying bridge for the shared healthcheck', () => {
+    const health = fakeBridgeHealth({ role: 'peer' });
+    const bridge = fakeBridge({ status: () => health });
+    const t = new HemnetFetchproxyTransport({ bridge });
+    expect(t.bridgeTransport()).toBe(bridge);
+    expect(t.bridgeTransport().status()).toBe(health);
   });
 });

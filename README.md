@@ -66,7 +66,7 @@ node dist/index.js
 | `hemnet_compare_listings` | Fetch several listings at once for side-by-side comparison. |
 | `hemnet_get_by_address` | Resolve a free-text street address to a live listing. |
 | `hemnet_calculate_mortgage` | Local Swedish monthly-cost calculator (interest + amortisation + fee, gross & after-tax). No network. |
-| `hemnet_healthcheck` | Verify the Hemnet GraphQL endpoint is reachable, and report which transport served the probe (direct fetch or the browser bridge, with the bridge role/port). |
+| `hemnet_healthcheck` | Verify the Hemnet GraphQL endpoint is reachable. Reports which transport served the probe (`transport`: direct fetch or the browser bridge, plus the configured `HEMNET_TRANSPORT`), the bridge's role/port/extension-link state (`bridge`, once a bridge exists), a classified `error.kind` (e.g. `cloudflare_challenge`, `session_not_ready`) and a next-step hint. |
 
 ### Example flow
 
