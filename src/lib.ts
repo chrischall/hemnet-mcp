@@ -33,7 +33,11 @@ export type {
 } from './transport-fetchproxy.js';
 export { FallbackTransport, createDefaultTransport } from './transport-fallback.js';
 export type { DefaultTransportOptions } from './transport-fallback.js';
-export type { HemnetTransport, GraphQLResponse } from './transport.js';
+export type {
+  HemnetTransport,
+  GraphQLResponse,
+  TransportStatus,
+} from './transport.js';
 
 // --- normalised records + formatters -----------------------------------
 export {

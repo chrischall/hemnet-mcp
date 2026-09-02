@@ -105,3 +105,36 @@ describe('createDefaultTransport', () => {
     expect(await t.graphql('q', {})).toEqual({ data: { via: 'bridge' } });
   });
 });
+
+describe('FallbackTransport.status', () => {
+  it('reports the direct path in auto mode before any challenge', () => {
+    const direct = { ...transportReturning({ ok: 1 }), status: () => ({ transport: 'direct' as const, mode: 'direct' as const }) };
+    const t = new FallbackTransport(direct, vi.fn());
+    expect(t.status()).toEqual({ transport: 'direct', mode: 'auto' });
+  });
+
+  it('reports the bridge path (with its bridge block) once switched', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const direct = transportThrowing(new CloudflareChallengeError('walled'));
+    const bridge = {
+      ...transportReturning({ via: 'bridge' }),
+      status: () => ({
+        transport: 'fetchproxy' as const,
+        mode: 'fetchproxy' as const,
+        bridge: { role: null, port: 37150, last_extension_message_at: null },
+      }),
+    };
+    const t = new FallbackTransport(direct, () => bridge);
+    await t.graphql('q', {});
+    expect(t.status()).toEqual({
+      transport: 'fetchproxy',
+      mode: 'auto',
+      bridge: { role: null, port: 37150, last_extension_message_at: null },
+    });
+  });
+
+  it('reports unknown paths when a transport has no status()', () => {
+    const t = new FallbackTransport(transportReturning({ ok: 1 }), vi.fn());
+    expect(t.status()).toEqual({ transport: 'unknown', mode: 'auto' });
+  });
+});

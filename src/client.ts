@@ -20,7 +20,7 @@ import {
   redactSecrets,
   truncateErrorMessage,
 } from '@chrischall/mcp-utils';
-import type { HemnetTransport } from './transport.js';
+import type { HemnetTransport, TransportStatus } from './transport.js';
 import {
   AUTOCOMPLETE_LOCATIONS,
   GET_LISTING,
@@ -162,5 +162,14 @@ export class HemnetClient {
   async healthcheck(): Promise<{ ok: true; hits: number }> {
     const hits = await this.autocompleteLocations('Stockholm', 1);
     return { ok: true, hits: hits.length };
+  }
+
+  /**
+   * Which path the transport is serving on, if it reports one — so
+   * `hemnet_healthcheck` can say whether a probe rode the direct fetch or
+   * the browser bridge, and whether the bridge ever linked.
+   */
+  transportStatus(): TransportStatus | undefined {
+    return this.transport.status?.();
   }
 }

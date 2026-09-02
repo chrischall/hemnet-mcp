@@ -27,7 +27,11 @@ import {
   type FetchproxyServerOpts,
 } from '@chrischall/mcp-utils/fetchproxy';
 import { readPortEnv } from '@chrischall/mcp-utils';
-import type { GraphQLResponse, HemnetTransport } from './transport.js';
+import type {
+  GraphQLResponse,
+  HemnetTransport,
+  TransportStatus,
+} from './transport.js';
 
 /**
  * The whole fetchproxy fleet shares ONE concentrator port — the
@@ -48,6 +52,12 @@ export interface HemnetBridge {
   fetch(
     init: FetchproxyFetchInit,
   ): Promise<{ status: number; body: string; url?: string }>;
+  /** Live bridge state (`bridgeHealth()`); optional for fakes. */
+  status?(): {
+    role: 'host' | 'peer' | null;
+    port: number;
+    lastExtensionMessageAt: number | null;
+  };
 }
 
 export interface FetchproxyTransportOptions {
@@ -100,6 +110,26 @@ export class HemnetFetchproxyTransport implements HemnetTransport {
     }
     await this.startPromise;
     return this.bridge;
+  }
+
+  status(): TransportStatus {
+    const health = this.bridge.status?.();
+    return {
+      transport: 'fetchproxy',
+      mode: 'fetchproxy',
+      ...(health
+        ? {
+            bridge: {
+              role: health.role,
+              port: health.port,
+              last_extension_message_at:
+                health.lastExtensionMessageAt === null
+                  ? null
+                  : new Date(health.lastExtensionMessageAt).toISOString(),
+            },
+          }
+        : {}),
+    };
   }
 
   async graphql<T>(

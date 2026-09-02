@@ -14,7 +14,11 @@
  * User-Agent identifies the client honestly rather than impersonating a
  * browser.
  */
-import type { GraphQLResponse, HemnetTransport } from './transport.js';
+import type {
+  GraphQLResponse,
+  HemnetTransport,
+  TransportStatus,
+} from './transport.js';
 
 const GRAPHQL_ENDPOINT = 'https://www.hemnet.se/graphql';
 
@@ -113,6 +117,10 @@ export class DirectTransport implements HemnetTransport {
     this.maxRetries = opts.maxRetries ?? 2;
     this.userAgent = `hemnet-mcp/${opts.version ?? '0.0.0'} (+https://github.com/chrischall/hemnet-mcp)`;
     this.fetchImpl = opts.fetchImpl ?? fetch;
+  }
+
+  status(): TransportStatus {
+    return { transport: 'direct', mode: 'direct' };
   }
 
   async graphql<T>(
