@@ -36,6 +36,18 @@ import type {
 import { CloudflareChallengeError } from './transport-direct.js';
 
 /**
+ * A non-2xx status answered through the browser bridge — an upstream HTTP
+ * failure, not a bridge fault. Attached as `cause` to the thrown message so
+ * the healthcheck classifies it as `http` by type rather than by wording.
+ */
+export class BridgeHttpStatusError extends Error {
+  constructor(readonly status: number) {
+    super(`Hemnet GraphQL HTTP ${status} via browser bridge`);
+    this.name = 'BridgeHttpStatusError';
+  }
+}
+
+/**
  * The whole fetchproxy fleet shares ONE concentrator port — the
  * Transporter extension dials it, and servers host/peer-elect on it.
  * Never default to a "unique" port; override only for test isolation.
@@ -152,6 +164,7 @@ export class HemnetFetchproxyTransport implements HemnetTransport {
         `Hemnet GraphQL HTTP ${result.status} via browser bridge — ` +
           `body starts: ${result.body.slice(0, 200)}. Open or refresh a ` +
           'www.hemnet.se tab (no login needed) and retry.',
+        { cause: new BridgeHttpStatusError(result.status) },
       );
     }
     try {
