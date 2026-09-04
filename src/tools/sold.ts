@@ -1,8 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { McpToolError } from '@chrischall/mcp-utils';
+import { McpToolError, minifiedResult } from '@chrischall/mcp-utils';
 import type { HemnetClient } from '../client.js';
-import { minifiedResult } from '../mcp.js';
 import { formatSaleCard, formatSoldDetail } from '../format.js';
 import { extractListingId } from '../url.js';
 import { buildSearchInput, searchInputShape, type SearchArgs } from './_shared.js';
