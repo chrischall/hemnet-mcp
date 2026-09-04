@@ -3,7 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { addressMatch } from '@chrischall/realty-core';
 import { messageOf } from '@chrischall/mcp-utils';
 import type { HemnetClient } from '../client.js';
-import { textResult } from '../mcp.js';
+import { minifiedResult } from '../mcp.js';
 import { formatListingCard, type ListingSummary } from '../format.js';
 import type { HemnetSearchInput } from '../graphql.js';
 
@@ -62,7 +62,7 @@ export function registerByAddressTools(
         const hits = await client.autocompleteLocations(location, 1);
         const top = hits[0];
         if (!top) {
-          return textResult({
+          return minifiedResult({
             resolved: false,
             error: `No Hemnet location matched "${location}".`,
           });
@@ -85,7 +85,7 @@ export function registerByAddressTools(
         }
 
         if (!best) {
-          return textResult({
+          return minifiedResult({
             resolved: false,
             location_id: top.locationId,
             searched: listings.length,
@@ -93,7 +93,7 @@ export function registerByAddressTools(
           });
         }
 
-        return textResult({
+        return minifiedResult({
           resolved: true,
           matched: true,
           matched_via: 'search',
@@ -102,7 +102,7 @@ export function registerByAddressTools(
           listing: best.record,
         });
       } catch (err) {
-        return textResult({ resolved: false, error: messageOf(err) });
+        return minifiedResult({ resolved: false, error: messageOf(err) });
       }
     },
   );

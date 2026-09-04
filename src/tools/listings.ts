@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpToolError } from '@chrischall/mcp-utils';
 import type { HemnetClient } from '../client.js';
-import { textResult } from '../mcp.js';
+import { minifiedResult } from '../mcp.js';
 import { formatListingDetail } from '../format.js';
 import { extractListingId } from '../url.js';
 
@@ -56,7 +56,7 @@ export function registerListingTools(
           `No active for-sale Hemnet listing found for id ${listingId}. If it has sold, try hemnet_get_sold_listing.`,
         );
       }
-      return textResult(formatListingDetail(node));
+      return minifiedResult(formatListingDetail(node));
     },
   );
 }

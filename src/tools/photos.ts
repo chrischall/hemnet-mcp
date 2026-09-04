@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { McpToolError } from '@chrischall/mcp-utils';
 import type { HemnetClient } from '../client.js';
-import { textResult } from '../mcp.js';
+import { minifiedResult } from '../mcp.js';
 import { extractListingId } from '../url.js';
 
 /**
@@ -57,7 +57,7 @@ export function registerPhotosTools(
       const photos = (node.images?.images ?? [])
         .map((i) => i.url)
         .filter((u): u is string => typeof u === 'string');
-      return textResult({
+      return minifiedResult({
         id: node.id,
         photo_count: node.images?.total ?? photos.length,
         photos,

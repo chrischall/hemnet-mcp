@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { HemnetClient } from '../client.js';
-import { textResult } from '../mcp.js';
+import { minifiedResult } from '../mcp.js';
 import { formatLocationHit } from '../format.js';
 
 /**
@@ -39,7 +39,7 @@ export function registerAutocompleteTools(
     },
     async ({ query, limit }) => {
       const hits = await client.autocompleteLocations(query, limit ?? 10);
-      return textResult({
+      return minifiedResult({
         query,
         count: hits.length,
         locations: hits.map(formatLocationHit),

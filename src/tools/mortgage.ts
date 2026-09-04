@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult } from '../mcp.js';
+import { minifiedResult } from '../mcp.js';
 import { calculateSwedishMortgage } from '../mortgage.js';
 
 /**
@@ -60,6 +60,6 @@ export function registerMortgageTools(server: McpServer): void {
           .describe('Override the computed amortisation rate (annual % of loan).'),
       },
     },
-    async (input) => textResult(calculateSwedishMortgage(input)),
+    async (input) => minifiedResult(calculateSwedishMortgage(input)),
   );
 }
