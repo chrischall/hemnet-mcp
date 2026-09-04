@@ -5,7 +5,7 @@
 
 ### Features
 
-* **tools:** compact by default — strip media URLs, and minify every response ([#62](https://github.com/chrischall/hemnet-mcp/issues/62)) ([fc87771](https://github.com/chrischall/hemnet-mcp/commit/fc877715ace27868169676cee484f8e891ee45a6))
+* **tools:** minify every response — no formatting whitespace on any payload ([#62](https://github.com/chrischall/hemnet-mcp/issues/62)) ([fc87771](https://github.com/chrischall/hemnet-mcp/commit/fc877715ace27868169676cee484f8e891ee45a6))
 
 
 ### Refactor
