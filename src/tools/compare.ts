@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mapWithConcurrency, messageOf } from '@chrischall/mcp-utils';
 import type { HemnetClient } from '../client.js';
-import { textResult } from '../mcp.js';
+import { minifiedResult } from '../mcp.js';
 import { formatListingDetail } from '../format.js';
 import { extractListingId } from '../url.js';
 
@@ -62,7 +62,7 @@ export function registerCompareTools(
           return { input: raw, error: messageOf(err) };
         }
       });
-      return textResult({ count: results.length, results });
+      return minifiedResult({ count: results.length, results });
     },
   );
 }

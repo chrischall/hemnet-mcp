@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { HemnetClient } from '../client.js';
-import { textResult } from '../mcp.js';
+import { minifiedResult } from '../mcp.js';
 import { formatListingCard } from '../format.js';
 import { buildSearchInput, searchInputShape, type SearchArgs } from './_shared.js';
 
@@ -37,7 +37,7 @@ export function registerSearchTools(
         offset: args.offset ?? 0,
         sort: args.sort ?? 'NEWEST',
       });
-      return textResult({
+      return minifiedResult({
         total,
         count: listings.length,
         location_ids: search.locationIds,

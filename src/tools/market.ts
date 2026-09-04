@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { HemnetClient } from '../client.js';
-import { textResult } from '../mcp.js';
+import { minifiedResult } from '../mcp.js';
 import { formatSaleCard } from '../format.js';
 import { computeMarketStats } from '../stats.js';
 import { buildSearchInput, searchInputShape, type SearchArgs } from './_shared.js';
@@ -41,7 +41,7 @@ export function registerMarketTools(
         sort: args.sort ?? 'NEWEST',
       });
       const sales = cards.map(formatSaleCard);
-      return textResult({
+      return minifiedResult({
         location_ids: search.locationIds,
         total_matching_sales: total,
         stats: computeMarketStats(sales),
