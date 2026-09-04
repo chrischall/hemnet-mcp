@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { HemnetClient } from '../client.js';
-import { minifiedResult } from '../mcp.js';
+import { minifiedResult } from '@chrischall/mcp-utils';
 import { formatLocationHit } from '../format.js';
 
 /**
