@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/chrischall/hemnet-mcp/compare/v0.5.0...v0.6.0) (2026-09-04)
+
+
+### Features
+
+* **tools:** minify every response — no formatting whitespace on any payload ([#62](https://github.com/chrischall/hemnet-mcp/issues/62)) ([fc87771](https://github.com/chrischall/hemnet-mcp/commit/fc877715ace27868169676cee484f8e891ee45a6))
+
+
+### Refactor
+
+* **imports:** import minifiedResult from the mcp-utils barrel directly ([#66](https://github.com/chrischall/hemnet-mcp/issues/66)) ([89709ec](https://github.com/chrischall/hemnet-mcp/commit/89709ec9345e885515df804a3db4c26cdbfab0e5))
+
 ## [0.5.0](https://github.com/chrischall/hemnet-mcp/compare/v0.4.0...v0.5.0) (2026-09-02)
 
 
