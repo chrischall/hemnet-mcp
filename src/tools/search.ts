@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { HemnetClient } from '../client.js';
-import { minifiedResult } from '../mcp.js';
+import { minifiedResult } from '@chrischall/mcp-utils';
 import { formatListingCard } from '../format.js';
 import { buildSearchInput, searchInputShape, type SearchArgs } from './_shared.js';
 

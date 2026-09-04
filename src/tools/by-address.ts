@@ -1,9 +1,8 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { addressMatch } from '@chrischall/realty-core';
-import { messageOf } from '@chrischall/mcp-utils';
+import { messageOf, minifiedResult } from '@chrischall/mcp-utils';
 import type { HemnetClient } from '../client.js';
-import { minifiedResult } from '../mcp.js';
 import { formatListingCard, type ListingSummary } from '../format.js';
 import type { HemnetSearchInput } from '../graphql.js';
 

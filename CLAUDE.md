@@ -125,8 +125,9 @@ node dist/index.js     # launch the stdio server
 
 ## Conventions
 
-- All tools prefixed `hemnet_*`; return via `textResult(data)` from
-  `src/mcp.ts` — don't hand-roll the content envelope.
+- All tools prefixed `hemnet_*`; return via `minifiedResult(data)` imported
+  from `@chrischall/mcp-utils` — don't hand-roll the content envelope, and
+  don't reintroduce a local re-export seam for it.
 - **ESM + NodeNext**: `.js` extensions on relative imports even from
   `.ts`. `verbatimModuleSyntax` is on → `import type` for type-only
   imports. `noUncheckedIndexedAccess` is on → narrow indexed access.
