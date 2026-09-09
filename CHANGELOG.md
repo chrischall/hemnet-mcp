@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.6.1](https://github.com/chrischall/hemnet-mcp/compare/v0.6.0...v0.6.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* **deps:** Bump fast-uri from 3.1.5 to 3.1.7 ([#74](https://github.com/chrischall/hemnet-mcp/issues/74)) ([a9080db](https://github.com/chrischall/hemnet-mcp/commit/a9080dba7961edd3257cc8a1ed206c65074d7647))
+* **deps:** Bump qs from 6.15.2 to 6.16.0 ([#75](https://github.com/chrischall/hemnet-mcp/issues/75)) ([f5e65f5](https://github.com/chrischall/hemnet-mcp/commit/f5e65f504945c6d19264b4435acac2bbbf3c2246))
+* **deps:** require @fetchproxy/server ^2.7.0, the first that reads FETCHPROXY_IDENTITY_DIR ([#72](https://github.com/chrischall/hemnet-mcp/issues/72)) ([8e1c6f9](https://github.com/chrischall/hemnet-mcp/commit/8e1c6f9abf74e2bb4a57c953f797e25a5384b3db))
+
 ## [0.6.0](https://github.com/chrischall/hemnet-mcp/compare/v0.5.0...v0.6.0) (2026-09-04)
 
 
