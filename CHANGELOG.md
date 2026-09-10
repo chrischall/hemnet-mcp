@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.6.2](https://github.com/chrischall/hemnet-mcp/compare/v0.6.1...v0.6.2) (2026-09-10)
+
+
+### Bug Fixes
+
+* **deps:** @fetchproxy/server 2.10.0 and @chrischall/mcp-utils 0.26.1 ([#79](https://github.com/chrischall/hemnet-mcp/issues/79)) ([4afe9fa](https://github.com/chrischall/hemnet-mcp/commit/4afe9fa92717acbe55f088620ee5bd3338720270))
+* **deps:** declare the peer floors mcp-utils 0.26.1 requires ([#80](https://github.com/chrischall/hemnet-mcp/issues/80)) ([1f413d5](https://github.com/chrischall/hemnet-mcp/commit/1f413d5904f9127a261b07c3066c014e222cb347))
+* **deps:** take @fetchproxy/server 2.9.1 so a pairing prompt survives ([#76](https://github.com/chrischall/hemnet-mcp/issues/76)) ([5872e91](https://github.com/chrischall/hemnet-mcp/commit/5872e912b42c2d998111e1bea4f61b29dbd71b1f))
+
 ## [0.6.1](https://github.com/chrischall/hemnet-mcp/compare/v0.6.0...v0.6.1) (2026-09-09)
 
 
