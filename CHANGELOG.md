@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.3](https://github.com/chrischall/hemnet-mcp/compare/v0.6.2...v0.6.3) (2026-09-14)
+
+
+### Bug Fixes
+
+* **deps:** @fetchproxy/server 2.11.3, so the hosted extension pin persists ([#81](https://github.com/chrischall/hemnet-mcp/issues/81)) ([40522c8](https://github.com/chrischall/hemnet-mcp/commit/40522c838e06769c7b0c56f7b11fa9e2a79f2a4b))
+* **deps:** @fetchproxy/server 3.0.0 — protocol v4 (forward secrecy, AAD over the frame) ([#83](https://github.com/chrischall/hemnet-mcp/issues/83)) ([d9201c1](https://github.com/chrischall/hemnet-mcp/commit/d9201c197e795001e76accde2073e80bc1b5a359))
+
 ## [0.6.2](https://github.com/chrischall/hemnet-mcp/compare/v0.6.1...v0.6.2) (2026-09-10)
 
 
