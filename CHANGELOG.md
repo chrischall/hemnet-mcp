@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.4](https://github.com/chrischall/hemnet-mcp/compare/v0.6.3...v0.6.4) (2026-09-15)
+
+
+### Bug Fixes
+
+* **deps:** @fetchproxy/server 3.0.1 — capped peer frames, logged load drops, atomic identity writes ([#84](https://github.com/chrischall/hemnet-mcp/issues/84)) ([39aa5a4](https://github.com/chrischall/hemnet-mcp/commit/39aa5a4f0e553d9d043c4e305799983ab07f054a))
+
 ## [0.6.3](https://github.com/chrischall/hemnet-mcp/compare/v0.6.2...v0.6.3) (2026-09-14)
 
 
