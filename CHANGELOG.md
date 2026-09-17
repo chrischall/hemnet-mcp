@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.5](https://github.com/chrischall/hemnet-mcp/compare/v0.6.4...v0.6.5) (2026-09-17)
+
+
+### Bug Fixes
+
+* **deps:** Bump the production-dependencies group with 2 updates ([#88](https://github.com/chrischall/hemnet-mcp/issues/88)) ([f14a3f8](https://github.com/chrischall/hemnet-mcp/commit/f14a3f87d7bcf454bbb9910cd765e25b64f9c836))
+
 ## [0.6.4](https://github.com/chrischall/hemnet-mcp/compare/v0.6.3...v0.6.4) (2026-09-15)
 
 

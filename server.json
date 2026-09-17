@@ -6,12 +6,12 @@
     "url": "https://github.com/chrischall/hemnet-mcp",
     "source": "github"
   },
-  "version": "0.6.4",
+  "version": "0.6.5",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "hemnet-mcp",
-      "version": "0.6.4",
+      "version": "0.6.5",
       "transport": {
         "type": "stdio"
       }
