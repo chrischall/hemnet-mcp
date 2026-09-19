@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import type { HemnetClient } from '../client.js';
 import { minifiedResult } from '@chrischall/mcp-utils';
 import { formatLocationHit } from '../format.js';
@@ -32,10 +32,10 @@ export function registerAutocompleteTools(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: {
+      inputSchema: z.object({
         query: z.string().min(1).describe('Place name, e.g. "Vasastan" or "Malmö".'),
         limit: z.number().int().min(1).max(20).optional().describe('Default 10.'),
-      },
+      }),
     },
     async ({ query, limit }) => {
       const hits = await client.autocompleteLocations(query, limit ?? 10);

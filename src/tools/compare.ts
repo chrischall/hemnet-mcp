@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { mapWithConcurrency, messageOf, minifiedResult } from '@chrischall/mcp-utils';
 import type { HemnetClient } from '../client.js';
 import { formatListingDetail } from '../format.js';
@@ -34,13 +34,13 @@ export function registerCompareTools(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: {
+      inputSchema: z.object({
         ids: z
           .array(z.string().min(1))
           .min(1)
           .max(MAX_TARGETS)
           .describe('Hemnet listing ids or /bostad/ URLs (max 20).'),
-      },
+      }),
     },
     async ({ ids }) => {
       const results = await mapWithConcurrency(ids, CONCURRENCY, async (raw) => {

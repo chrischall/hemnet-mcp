@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { minifiedResult } from '@chrischall/mcp-utils';
 import { calculateSwedishMortgage } from '../mortgage.js';
 
@@ -25,7 +25,7 @@ export function registerMortgageTools(server: McpServer): void {
         idempotentHint: true,
         openWorldHint: false,
       },
-      inputSchema: {
+      inputSchema: z.object({
         price: z.number().positive().describe('Purchase price in SEK.'),
         interest_rate: z
           .number()
@@ -58,7 +58,7 @@ export function registerMortgageTools(server: McpServer): void {
           .nonnegative()
           .optional()
           .describe('Override the computed amortisation rate (annual % of loan).'),
-      },
+      }),
     },
     async (input) => minifiedResult(calculateSwedishMortgage(input)),
   );

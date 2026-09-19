@@ -6,7 +6,7 @@
  * against this client" in one call — so it lives here next to the
  * individual registrars, not duplicated at each call site.
  */
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import type { HemnetClient } from '../client.js';
 import { registerAutocompleteTools } from './autocomplete.js';
 import { registerSearchTools } from './search.js';

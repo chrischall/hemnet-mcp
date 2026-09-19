@@ -1,4 +1,5 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
+import type { McpServer } from '@modelcontextprotocol/server';
 import type { HemnetClient } from '../client.js';
 import { minifiedResult } from '@chrischall/mcp-utils';
 import { formatListingCard } from '../format.js';
@@ -28,7 +29,7 @@ export function registerSearchTools(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: searchInputShape,
+      inputSchema: z.object(searchInputShape),
     },
     async (args: SearchArgs) => {
       const search = await buildSearchInput(client, args);
