@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { McpToolError, minifiedResult } from '@chrischall/mcp-utils';
 import type { HemnetClient } from '../client.js';
 import { extractListingId } from '../url.js';
@@ -28,7 +28,7 @@ export function registerPhotosTools(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: {
+      inputSchema: z.object({
         id: z
           .string()
           .min(1)
@@ -40,7 +40,7 @@ export function registerPhotosTools(
           .max(300)
           .optional()
           .describe('Max photos to return. Default 50.'),
-      },
+      }),
     },
     async ({ id, limit }) => {
       const listingId = extractListingId(id);

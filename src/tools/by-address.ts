@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { addressMatch } from '@chrischall/realty-core';
 import { messageOf, minifiedResult } from '@chrischall/mcp-utils';
 import type { HemnetClient } from '../client.js';
@@ -43,7 +43,7 @@ export function registerByAddressTools(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: {
+      inputSchema: z.object({
         address: z
           .string()
           .min(1)
@@ -54,7 +54,7 @@ export function registerByAddressTools(
           .describe('City / area / municipality, e.g. "Södertälje" or "Vasastan".'),
         price_min: z.number().int().nonnegative().optional().describe('SEK, narrows the search rung.'),
         price_max: z.number().int().nonnegative().optional().describe('SEK, narrows the search rung.'),
-      },
+      }),
     },
     async ({ address, location, price_min, price_max }) => {
       try {

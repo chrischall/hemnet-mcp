@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { McpToolError, minifiedResult } from '@chrischall/mcp-utils';
 import type { HemnetClient } from '../client.js';
 import { formatSaleCard, formatSoldDetail } from '../format.js';
@@ -32,7 +32,7 @@ export function registerSoldTools(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: searchInputShape,
+      inputSchema: z.object(searchInputShape),
     },
     async (args: SearchArgs) => {
       const search = await buildSearchInput(client, args);
@@ -62,12 +62,12 @@ export function registerSoldTools(
         idempotentHint: true,
         openWorldHint: true,
       },
-      inputSchema: {
+      inputSchema: z.object({
         id: z
           .string()
           .min(1)
           .describe('Hemnet sold-listing id, or a full hemnet.se /salda/ URL.'),
-      },
+      }),
     },
     async ({ id }) => {
       const listingId = extractListingId(id);
