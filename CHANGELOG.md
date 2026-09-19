@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/chrischall/hemnet-mcp/compare/v0.6.5...v1.0.0) (2026-09-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* **mcp:** migrate server to SDK v2 ([#90](https://github.com/chrischall/hemnet-mcp/issues/90))
+
+### Features
+
+* **mcp:** migrate server to SDK v2 ([#90](https://github.com/chrischall/hemnet-mcp/issues/90)) ([71a1e35](https://github.com/chrischall/hemnet-mcp/commit/71a1e352a712085a28fab81dc5576d66424bcfce))
+
 ## [0.6.5](https://github.com/chrischall/hemnet-mcp/compare/v0.6.4...v0.6.5) (2026-09-17)
 
 
