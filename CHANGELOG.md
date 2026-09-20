@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/chrischall/hemnet-mcp/compare/v1.0.0...v1.1.0) (2026-09-19)
+
+
+### Features
+
+* **deps:** take mcp-utils 1.0.0, so the server boots through serveStdio ([#93](https://github.com/chrischall/hemnet-mcp/issues/93)) ([0055a68](https://github.com/chrischall/hemnet-mcp/commit/0055a6813b7de4c52a5eb6eab1a76cd50cd21453))
+
 ## [1.0.0](https://github.com/chrischall/hemnet-mcp/compare/v0.6.5...v1.0.0) (2026-09-19)
 
 
