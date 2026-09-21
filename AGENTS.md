@@ -1,6 +1,6 @@
 # AGENTS.md — hemnet-mcp
 
-Guidance for Codex working in this repo.
+Guidance for Claude working in this repo.
 
 ## TL;DR
 
