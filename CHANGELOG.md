@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/chrischall/hemnet-mcp/compare/v1.1.0...v1.1.1) (2026-09-21)
+
+
+### Documentation
+
+* AGENTS.md pointed at a directory that does not exist ([#95](https://github.com/chrischall/hemnet-mcp/issues/95)) ([4b1528a](https://github.com/chrischall/hemnet-mcp/commit/4b1528a2fc63e5a039c706fe78e354ffc681926e))
+
 ## [1.1.0](https://github.com/chrischall/hemnet-mcp/compare/v1.0.0...v1.1.0) (2026-09-19)
 
 
