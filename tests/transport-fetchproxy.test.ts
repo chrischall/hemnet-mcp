@@ -21,6 +21,26 @@ describe('HemnetFetchproxyTransport', () => {
     });
   });
 
+  it('opts read-only GraphQL queries into retryOnTimeout (cold-start retry)', async () => {
+    const bridge = fakeBridge();
+    const t = new HemnetFetchproxyTransport({ bridge });
+    await t.graphql('query X { x }', {});
+    await t.graphql('fragment F on T { a }\nquery Y { ...F }', {});
+    for (const [init] of vi.mocked(bridge.fetch).mock.calls) {
+      expect(init.retryOnTimeout).toBe(true);
+    }
+  });
+
+  it('does NOT opt a GraphQL mutation into retryOnTimeout', async () => {
+    const bridge = fakeBridge();
+    const t = new HemnetFetchproxyTransport({ bridge });
+    await t.graphql('mutation SaveListing($id: ID!) { save(id: $id) }', { id: '1' });
+    await t.graphql('fragment F on T { a }\nmutation M { m { ...F } }', {});
+    for (const [init] of vi.mocked(bridge.fetch).mock.calls) {
+      expect(init.retryOnTimeout).toBeUndefined();
+    }
+  });
+
   it('starts the bridge once across concurrent calls', async () => {
     const bridge = fakeBridge();
     const t = new HemnetFetchproxyTransport({ bridge });
