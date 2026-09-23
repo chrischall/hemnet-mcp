@@ -89,6 +89,7 @@ describe('hemnet_get_by_address', () => {
     expect(body.resolved).toBe(false);
     expect(body.searched).toBe(2);
     expect(body.error).toContain('Vasastan');
+    expect((body as { truncated?: boolean }).truncated).toBe(false);
     await h.close();
   });
 
@@ -100,6 +101,114 @@ describe('hemnet_get_by_address', () => {
     const body = parseToolResult<{ resolved: boolean; error: string }>(res);
     expect(body.resolved).toBe(false);
     expect(body.error).toMatch(/network down/);
+    await h.close();
+  });
+
+  // Filler rows whose street never matches the query addresses below.
+  const filler = (n: number, from = 0) =>
+    Array.from({ length: n }, (_, i) => ({
+      ...LISTING_CARD,
+      id: `filler-${from + i}`,
+      streetAddress: `Fyllnadsvägen ${from + i + 100}`,
+    }));
+
+  it('pages past the 50 newest listings to find an older match', async () => {
+    const offsets: number[] = [];
+    const client = routedClient({
+      AutocompleteLocations: { data: { autocompleteLocations: { hits: [LOCATION_HIT] } } },
+      SearchForSale: (vars) => {
+        const offset = vars.offset as number;
+        offsets.push(offset);
+        const listings = offset === 0 ? filler(50) : [...filler(10, 50), HOUSE_CARD];
+        return { data: { searchForSaleListings: { total: 61, listings } } };
+      },
+    });
+    const h = await createTestHarness((s) => registerByAddressTools(s, client));
+    const res = await h.callTool('hemnet_get_by_address', {
+      address: 'Gäddstigen 1',
+      location: 'Södertälje',
+    });
+    const body = parseToolResult<{ resolved: boolean; listing?: { id: string } }>(res);
+    expect(body.resolved).toBe(true);
+    expect(body.listing!.id).toBe('21710712');
+    expect(offsets).toEqual([0, 50]);
+    await h.close();
+  });
+
+  it('stops paging once an exact match is found', async () => {
+    const offsets: number[] = [];
+    const client = routedClient({
+      AutocompleteLocations: { data: { autocompleteLocations: { hits: [LOCATION_HIT] } } },
+      SearchForSale: (vars) => {
+        offsets.push(vars.offset as number);
+        return {
+          data: { searchForSaleListings: { total: 5000, listings: [HOUSE_CARD, ...filler(49)] } },
+        };
+      },
+    });
+    const h = await createTestHarness((s) => registerByAddressTools(s, client));
+    const res = await h.callTool('hemnet_get_by_address', {
+      address: 'Gäddstigen 1',
+      location: 'Södertälje',
+    });
+    expect(parseToolResult<{ resolved: boolean }>(res).resolved).toBe(true);
+    expect(offsets).toEqual([0]);
+    await h.close();
+  });
+
+  it('caps paging and says the miss is not definitive when the cap cuts it short', async () => {
+    const offsets: number[] = [];
+    const client = routedClient({
+      AutocompleteLocations: { data: { autocompleteLocations: { hits: [LOCATION_HIT] } } },
+      SearchForSale: (vars) => {
+        const offset = vars.offset as number;
+        offsets.push(offset);
+        return { data: { searchForSaleListings: { total: 5000, listings: filler(50, offset) } } };
+      },
+    });
+    const h = await createTestHarness((s) => registerByAddressTools(s, client));
+    const res = await h.callTool('hemnet_get_by_address', {
+      address: 'Gäddstigen 1',
+      location: 'Södertälje',
+    });
+    const body = parseToolResult<{
+      resolved: boolean;
+      searched: number;
+      total: number;
+      truncated: boolean;
+      error: string;
+    }>(res);
+    expect(body.resolved).toBe(false);
+    expect(body.truncated).toBe(true);
+    expect(body.total).toBe(5000);
+    expect(body.searched).toBe(offsets.length * 50);
+    expect(offsets.length).toBeGreaterThan(1);
+    expect(offsets.length).toBeLessThan(100);
+    expect(body.error).toContain(`searched ${body.searched} of 5000`);
+    expect(body.error).toMatch(/not definitive/);
+    await h.close();
+  });
+
+  it('stops when a page comes back empty even if total claims more', async () => {
+    const offsets: number[] = [];
+    const client = routedClient({
+      AutocompleteLocations: { data: { autocompleteLocations: { hits: [LOCATION_HIT] } } },
+      SearchForSale: (vars) => {
+        const offset = vars.offset as number;
+        offsets.push(offset);
+        const listings = offset === 0 ? filler(50) : [];
+        return { data: { searchForSaleListings: { total: 400, listings } } };
+      },
+    });
+    const h = await createTestHarness((s) => registerByAddressTools(s, client));
+    const res = await h.callTool('hemnet_get_by_address', {
+      address: 'Gäddstigen 1',
+      location: 'Södertälje',
+    });
+    const body = parseToolResult<{ resolved: boolean; searched: number }>(res);
+    expect(body.resolved).toBe(false);
+    expect(body.searched).toBe(50);
+    expect(offsets).toEqual([0, 50]);
     await h.close();
   });
 });

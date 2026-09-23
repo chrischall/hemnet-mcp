@@ -38,7 +38,8 @@ Then pass a `location_id` into the search tools — or pass a free-text
 - `hemnet_get_listing_photos` — just the gallery URLs.
 - `hemnet_compare_listings` — several listings at once (≤20).
 - `hemnet_get_by_address` — resolve a street address (+ city/area) to a
-  live listing.
+  live listing. Scans up to 500 listings in the location; a miss with
+  `truncated: true` is not definitive — add `price_min`/`price_max`.
 
 ## Sold prices (slutpriser) — Hemnet's signature dataset
 
