@@ -48,12 +48,66 @@ export class BridgeHttpStatusError extends Error {
 }
 
 /**
- * True when the GraphQL document declares no `mutation` / `subscription`
- * operation — i.e. it is safe to re-send after a transport timeout.
- * Errs on the side of "not read-only" (no retry) on anything ambiguous.
+ * The top-level (outside every `{}` / `()`) name tokens of a GraphQL
+ * document, plus whether its first significant token is a `{` (the
+ * anonymous query shorthand). Skips a leading BOM, whitespace, commas,
+ * `#` line comments and string / block-string literals, so neither a
+ * comment nor a string can masquerade as — or hide — an operation keyword.
+ */
+function topLevelTokens(document: string): { names: string[]; shorthand: boolean } {
+  const names: string[] = [];
+  let depth = 0;
+  let first: string | undefined;
+  let i = 0;
+  const n = document.length;
+  while (i < n) {
+    const c = document[i]!;
+    if (c === '﻿' || c === ',' || /\s/.test(c)) {
+      i++;
+    } else if (c === '#') {
+      while (i < n && document[i] !== '\n' && document[i] !== '\r') i++;
+    } else if (document.startsWith('"""', i)) {
+      const end = document.indexOf('"""', i + 3);
+      i = end === -1 ? n : end + 3;
+      first ??= 'string';
+    } else if (c === '"') {
+      i++;
+      while (i < n && document[i] !== '"' && document[i] !== '\n') {
+        i += document[i] === '\\' ? 2 : 1;
+      }
+      i++;
+      first ??= 'string';
+    } else if (/[A-Za-z_]/.test(c)) {
+      const start = i;
+      while (i < n && /\w/.test(document[i]!)) i++;
+      const name = document.slice(start, i);
+      if (depth === 0) names.push(name);
+      first ??= name;
+    } else {
+      if (c === '{' || c === '(') depth++;
+      else if (c === '}' || c === ')') depth = Math.max(0, depth - 1);
+      first ??= c;
+      i++;
+    }
+  }
+  return { names, shorthand: first === '{' };
+}
+
+/**
+ * True when the GraphQL document is a query — its operations are all
+ * `query` or the anonymous `{ … }` shorthand — i.e. it is safe to re-send
+ * after a transport timeout. Leading comments, whitespace and a BOM are
+ * skipped, and any top-level `mutation` / `subscription` anywhere makes it
+ * NOT read-only. Anything unrecognised (empty, comment-only, stray token)
+ * is also treated as not read-only: a wrong "no" costs one cold-start
+ * retry, a wrong "yes" can re-send a write.
  */
 export function isReadOnlyOperation(document: string): boolean {
-  return !/(^|\})\s*(mutation|subscription)\b/.test(document.trimStart());
+  const { names, shorthand } = topLevelTokens(document);
+  if (names.some((name) => name === 'mutation' || name === 'subscription')) {
+    return false;
+  }
+  return shorthand || names.includes('query');
 }
 
 /**
