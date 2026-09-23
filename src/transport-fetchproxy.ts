@@ -48,6 +48,15 @@ export class BridgeHttpStatusError extends Error {
 }
 
 /**
+ * True when the GraphQL document declares no `mutation` / `subscription`
+ * operation — i.e. it is safe to re-send after a transport timeout.
+ * Errs on the side of "not read-only" (no retry) on anything ambiguous.
+ */
+export function isReadOnlyOperation(document: string): boolean {
+  return !/(^|\})\s*(mutation|subscription)\b/.test(document.trimStart());
+}
+
+/**
  * The whole fetchproxy fleet shares ONE concentrator port — the
  * Transporter extension dials it, and servers host/peer-elect on it.
  * Never default to a "unique" port; override only for test isolation.
@@ -147,6 +156,10 @@ export class HemnetFetchproxyTransport implements HemnetTransport {
           accept: 'application/json',
         },
         body: JSON.stringify({ query, variables }),
+        // fetchproxy 3.2 no longer re-sends a POST after a transport
+        // timeout. Every Hemnet operation is a read-only `query`, so keep
+        // the cold-start retry for those — but never for a mutation.
+        ...(isReadOnlyOperation(query) ? { retryOnTimeout: true } : {}),
       });
     } catch (err) {
       // Bridge-layer failures (extension down, pairing pending, timeout)
