@@ -16,6 +16,7 @@ describe('isReadOnlyOperation', () => {
     ['comment containing mutation', '# mutation Old { m }\nquery X { x }'],
     ['block-string argument containing mutation', 'query X { x(d: """mutation { m }""") }'],
     ['escaped quote inside a string argument', 'query X { x(s: "a \\" mutation {") }'],
+    ['block string with an escaped \\""" inside a query', 'query X { x(d: """a \\""" b""") }'],
   ])('%s → read-only', (_label, doc) => {
     expect(isReadOnlyOperation(doc)).toBe(true);
   });
@@ -36,6 +37,7 @@ describe('isReadOnlyOperation', () => {
     ['unrecognised leading token', 'q'],
     ['block string before a mutation', '"""doc"""\nmutation M { m }'],
     ['unterminated block string hiding a mutation', '"""mutation M { m }'],
+    ['escaped \\""" in a block string, then a real mutation', 'query X { x(d: """a \\""" b""") }\nmutation M { m }'],
   ])('%s → NOT read-only', (_label, doc) => {
     expect(isReadOnlyOperation(doc)).toBe(false);
   });
