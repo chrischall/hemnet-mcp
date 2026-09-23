@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/chrischall/hemnet-mcp/compare/v1.1.3...v1.1.4) (2026-09-23)
+
+
+### Bug Fixes
+
+* current Swedish mortgage rules and full-location address resolution ([#106](https://github.com/chrischall/hemnet-mcp/issues/106)) ([54c745a](https://github.com/chrischall/hemnet-mcp/commit/54c745afb74aa932ad6e77ae3a94b38fc9a26f0d))
+
 ## [1.1.3](https://github.com/chrischall/hemnet-mcp/compare/v1.1.2...v1.1.3) (2026-09-23)
 
 
