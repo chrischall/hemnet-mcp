@@ -18,7 +18,11 @@ import type { HemnetSearchInput } from '../graphql.js';
  *
  *   1. Resolve the `location` (city/area/municipality) to a Hemnet
  *      location id via `autocompleteLocations`.
- *   2. Search that location's for-sale listings (optionally price-banded).
+ *   2. Search that location's for-sale listings (optionally price-banded),
+ *      paging `PAGE_SIZE` at a time up to `MAX_PAGES` pages — a big
+ *      location (Stockholm, Göteborg, …) has far more than one page of
+ *      listings, and the one we want is not necessarily among the newest.
+ *      If the cap cuts the scan short, the miss says so (`truncated`).
  *   3. Verify each candidate's `streetAddress` against the input with
  *      realty-core's portal-agnostic `addressMatch` (whole-token street +
  *      exact numeric anchor). Return the best match.
@@ -27,6 +31,11 @@ import type { HemnetSearchInput } from '../graphql.js';
  * transport error returns `{ resolved: false, error }` rather than
  * throwing — so a cross-portal fan-out gets a partial, not a fatal.
  */
+/** Listings per search page (the API's max `limit`). */
+const PAGE_SIZE = 50;
+/** Page cap: at most PAGE_SIZE × MAX_PAGES listings are scanned. */
+const MAX_PAGES = 10;
+
 export function registerByAddressTools(
   server: McpServer,
   client: HemnetClient,
@@ -36,7 +45,7 @@ export function registerByAddressTools(
     {
       title: 'Resolve a street address to a Hemnet listing',
       description:
-        'Resolve a free-text Swedish street address to a live Hemnet for-sale listing. Give the `address` (street + number) and a `location` (city/area/municipality). Returns the matched listing with a `matched: true`, the match `score`, and `matched_via`, or `{ resolved: false }` when nothing matches. Read-only.',
+        `Resolve a free-text Swedish street address to a live Hemnet for-sale listing. Give the \`address\` (street + number) and a \`location\` (city/area/municipality). Returns the matched listing with a \`matched: true\`, the match \`score\`, and \`matched_via\`, or \`{ resolved: false }\` when nothing matches. Scans up to ${PAGE_SIZE * MAX_PAGES} listings in the location; a miss with \`truncated: true\` is not definitive — pass price_min/price_max or a smaller location to narrow it. Read-only.`,
       annotations: {
         title: 'Resolve a street address to a Hemnet listing',
         readOnlyHint: true,
@@ -71,24 +80,44 @@ export function registerByAddressTools(
         if (price_min != null) search.priceMin = price_min;
         if (price_max != null) search.priceMax = price_max;
 
-        const { listings } = await client.searchForSale(search, { limit: 50 });
-
         let best: { record: ListingSummary; score: number } | null = null;
-        for (const raw of listings) {
-          const candidate = raw.streetAddress;
-          if (!candidate) continue;
-          const { matched, score } = addressMatch(address, candidate);
-          if (matched && (best === null || score > best.score)) {
-            best = { record: formatListingCard(raw), score };
+        let searched = 0;
+        let total = 0;
+        let exhausted = false;
+        for (let page = 0; page < MAX_PAGES; page++) {
+          const result = await client.searchForSale(search, {
+            limit: PAGE_SIZE,
+            offset: page * PAGE_SIZE,
+          });
+          total = result.total;
+          searched += result.listings.length;
+          for (const raw of result.listings) {
+            const candidate = raw.streetAddress;
+            if (!candidate) continue;
+            const { matched, score } = addressMatch(address, candidate);
+            if (matched && (best === null || score > best.score)) {
+              best = { record: formatListingCard(raw), score };
+            }
+          }
+          if (best !== null && best.score >= 1) break; // exact match — done
+          if (result.listings.length === 0 || searched >= total) {
+            exhausted = true;
+            break;
           }
         }
 
         if (!best) {
+          const truncated = !exhausted && searched < total;
+          const where = top.fullName ?? location;
           return minifiedResult({
             resolved: false,
             location_id: top.locationId,
-            searched: listings.length,
-            error: `No for-sale listing in ${top.fullName ?? location} matched "${address}".`,
+            searched,
+            total,
+            truncated,
+            error: truncated
+              ? `No match for "${address}" among the newest for-sale listings in ${where} (searched ${searched} of ${total}); this is not definitive — narrow with price_min/price_max or a smaller location.`
+              : `No for-sale listing in ${where} matched "${address}".`,
           });
         }
 

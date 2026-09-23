@@ -15,22 +15,37 @@ describe('amortizationRate', () => {
   it('is 0% at or below 50% LTV', () => {
     expect(amortizationRate(400_000, 0.4)).toBe(0);
   });
-  it('adds the +1% debt-ratio surcharge when loan > 4.5x income', () => {
-    expect(amortizationRate(5_000_000, 0.8, 1_000_000)).toBe(3);
+  // The skärpt amorteringskrav (+1% when loan > 4.5x gross income) was
+  // abolished on 1 April 2026 — income no longer affects the rate.
+  it('does not add a debt-ratio surcharge when loan > 4.5x income', () => {
+    expect(amortizationRate(5_000_000, 0.8, 1_000_000)).toBe(2);
   });
-  it('does not add the surcharge for a modest debt ratio', () => {
+  it('is unaffected by income for a modest debt ratio', () => {
     expect(amortizationRate(3_000_000, 0.8, 1_000_000)).toBe(2);
   });
 });
 
 describe('calculateSwedishMortgage', () => {
-  it('defaults the down payment to the legal 15% minimum', () => {
+  it('defaults the down payment to the legal 10% minimum (bolånetak 90% from 1 April 2026)', () => {
     const m = calculateSwedishMortgage({ price: 1_000_000, interest_rate: 3 });
-    expect(m.down_payment).toBe(150_000);
-    expect(m.loan_amount).toBe(850_000);
-    expect(m.ltv).toBe(0.85);
+    expect(m.down_payment).toBe(100_000);
+    expect(m.loan_amount).toBe(900_000);
+    expect(m.ltv).toBe(0.9);
     expect(m.amortization_rate).toBe(2);
-    expect(MIN_DOWN_PAYMENT_FRACTION).toBe(0.15);
+    expect(MIN_DOWN_PAYMENT_FRACTION).toBe(0.1);
+  });
+
+  it('ignores gross_yearly_income (audit scenario: 5M, 15% down, 800k income)', () => {
+    const m = calculateSwedishMortgage({
+      price: 5_000_000,
+      interest_rate: 3,
+      down_payment_percent: 15,
+      gross_yearly_income: 800_000,
+    });
+    expect(m.loan_amount).toBe(4_250_000);
+    expect(m.amortization_rate).toBe(2);
+    // 4.25M * 2% / 12 = 7083.33
+    expect(m.monthly_amortization).toBe(7083);
   });
 
   it('honours an explicit down payment and fee/operating costs', () => {
