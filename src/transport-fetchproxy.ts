@@ -67,7 +67,14 @@ function topLevelTokens(document: string): { names: string[]; shorthand: boolean
     } else if (c === '#') {
       while (i < n && document[i] !== '\n' && document[i] !== '\r') i++;
     } else if (document.startsWith('"""', i)) {
-      const end = document.indexOf('"""', i + 3);
+      // A block string ends at the first `"""` that isn't the escaped `\"""`.
+      // Stopping at an escaped one would turn the real terminator into the
+      // start of a new block string that swallows the rest of the document —
+      // including a genuine top-level `mutation`.
+      let end = document.indexOf('"""', i + 3);
+      while (end !== -1 && document[end - 1] === '\\') {
+        end = document.indexOf('"""', end + 3);
+      }
       i = end === -1 ? n : end + 3;
       first ??= 'string';
     } else if (c === '"') {
