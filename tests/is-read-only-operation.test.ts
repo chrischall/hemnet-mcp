@@ -14,6 +14,8 @@ describe('isReadOnlyOperation', () => {
     ['BOM + comment-prefixed query', '﻿  # note\n  query X { x }'],
     ['query with a "mutation" field and string', 'query X { mutation(s: "mutation {") { id } }'],
     ['comment containing mutation', '# mutation Old { m }\nquery X { x }'],
+    ['block-string argument containing mutation', 'query X { x(d: """mutation { m }""") }'],
+    ['escaped quote inside a string argument', 'query X { x(s: "a \\" mutation {") }'],
   ])('%s → read-only', (_label, doc) => {
     expect(isReadOnlyOperation(doc)).toBe(true);
   });
@@ -32,6 +34,8 @@ describe('isReadOnlyOperation', () => {
     ['empty document', ''],
     ['comment-only document', '# nothing here'],
     ['unrecognised leading token', 'q'],
+    ['block string before a mutation', '"""doc"""\nmutation M { m }'],
+    ['unterminated block string hiding a mutation', '"""mutation M { m }'],
   ])('%s → NOT read-only', (_label, doc) => {
     expect(isReadOnlyOperation(doc)).toBe(false);
   });
