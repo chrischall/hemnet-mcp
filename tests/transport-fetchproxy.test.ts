@@ -36,6 +36,7 @@ describe('HemnetFetchproxyTransport', () => {
     const t = new HemnetFetchproxyTransport({ bridge });
     await t.graphql('mutation SaveListing($id: ID!) { save(id: $id) }', { id: '1' });
     await t.graphql('fragment F on T { a }\nmutation M { m { ...F } }', {});
+    await t.graphql('# save a listing\nmutation M { m }', {});
     for (const [init] of vi.mocked(bridge.fetch).mock.calls) {
       expect(init.retryOnTimeout).toBeUndefined();
     }
