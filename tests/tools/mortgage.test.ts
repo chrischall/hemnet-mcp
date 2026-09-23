@@ -22,4 +22,15 @@ describe('hemnet_calculate_mortgage', () => {
     expect(body.monthly_total_after_tax).toBeLessThan(body.monthly_total_gross);
     await h.close();
   });
+
+  it('describes current rules: 10% minimum and no debt-ratio surcharge', async () => {
+    const h = await createTestHarness((s) => registerMortgageTools(s));
+    const { tools } = await h.client.listTools();
+    const tool = tools.find((t) => t.name === 'hemnet_calculate_mortgage')!;
+    const text = JSON.stringify(tool);
+    expect(text).not.toMatch(/15%/);
+    expect(text).not.toMatch(/surcharge/);
+    expect(text).toMatch(/10%/);
+    await h.close();
+  });
 });

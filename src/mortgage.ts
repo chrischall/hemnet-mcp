@@ -9,13 +9,17 @@
  *     *interest cost* (not an amortising P&I payment) is what buyers
  *     compare. Swedish mortgages are effectively interest-only plus a
  *     legally-mandated amortisation on top.
- *   - **Amorteringskrav (amortisation requirement)** — set by LTV, with
- *     a debt-ratio surcharge (Finansinspektionen's rules):
+ *   - **Amorteringskrav (amortisation requirement)** — set by LTV
+ *     (Finansinspektionen's rules, as of 1 April 2026):
  *       LTV > 70%             → 2% of the loan / year
  *       50% < LTV ≤ 70%       → 1% / year
  *       LTV ≤ 50%             → 0% (base)
- *       loan > 4.5× gross yearly income → +1% / year (skuldkvotsregeln)
- *   - **Kontantinsats (down payment)** — at least 15% of price by law.
+ *     The skärpt amorteringskrav (+1% / year when the loan exceeds 4.5×
+ *     gross yearly income) was ABOLISHED on 1 April 2026, so income no
+ *     longer affects the rate.
+ *   - **Kontantinsats (down payment)** — at least 10% of price by law
+ *     (bolånetaket rose from 85% to 90% on 1 April 2026; it was 15%
+ *     before that).
  *   - **Avgift (BRF monthly fee)** for `bostadsrätt` apartments, or
  *     **driftkostnad (operating cost)** for houses — a real, large part
  *     of the monthly outlay, so it's a first-class input.
@@ -26,8 +30,11 @@
  * All amounts are SEK. The function is pure and deterministic.
  */
 
-/** Legal minimum down payment: 15% of the purchase price. */
-export const MIN_DOWN_PAYMENT_FRACTION = 0.15;
+/**
+ * Legal minimum down payment: 10% of the purchase price (bolånetak 90%,
+ * effective 1 April 2026 — previously 15%).
+ */
+export const MIN_DOWN_PAYMENT_FRACTION = 0.1;
 
 /** Interest-deduction breakpoint: 100 000 kr of interest per year. */
 const DEDUCTION_BREAKPOINT_YEARLY = 100_000;
@@ -41,13 +48,17 @@ export interface SwedishMortgageInput {
   interest_rate: number;
   /** Down payment in SEK. Provide this OR `down_payment_percent`. */
   down_payment?: number;
-  /** Down payment as a percent of price (0–100). Defaults to 15%. */
+  /** Down payment as a percent of price (0–100). Defaults to 10%. */
   down_payment_percent?: number;
   /** Monthly BRF fee (avgift) in SEK — for bostadsrätt apartments. */
   monthly_fee?: number;
   /** Monthly operating cost (driftkostnad) in SEK — typically for houses. */
   monthly_operating_cost?: number;
-  /** Gross household income per year in SEK — enables the debt-ratio amortisation surcharge. */
+  /**
+   * Gross household income per year in SEK.
+   * @deprecated Ignored since the skärpt amorteringskrav (debt-ratio rule)
+   * was abolished on 1 April 2026. Kept so existing callers still compile.
+   */
   gross_yearly_income?: number;
   /** Override the computed amortisation rate (annual % of loan). */
   amortization_rate?: number;
@@ -76,26 +87,21 @@ function kr(n: number): number {
 }
 
 /**
- * Compute the base amortisation rate from LTV, plus the +1% debt-ratio
- * surcharge when income is known and the loan exceeds 4.5× gross yearly
- * income.
+ * Compute the amortisation rate (annual % of the loan) from LTV.
+ *
+ * `loan` and `grossYearlyIncome` are unused since the skärpt
+ * amorteringskrav (+1% when loan > 4.5× gross income) was abolished on
+ * 1 April 2026; they stay in the signature for backward compatibility of
+ * this exported helper.
  */
 export function amortizationRate(
-  loan: number,
+  _loan: number,
   ltv: number,
-  grossYearlyIncome?: number,
+  _grossYearlyIncome?: number,
 ): number {
-  let rate = 0;
-  if (ltv > 0.7) rate = 2;
-  else if (ltv > 0.5) rate = 1;
-  if (
-    grossYearlyIncome != null &&
-    grossYearlyIncome > 0 &&
-    loan > 4.5 * grossYearlyIncome
-  ) {
-    rate += 1;
-  }
-  return rate;
+  if (ltv > 0.7) return 2;
+  if (ltv > 0.5) return 1;
+  return 0;
 }
 
 export function calculateSwedishMortgage(
@@ -111,7 +117,7 @@ export function calculateSwedishMortgage(
 
   const amortRate =
     input.amortization_rate ??
-    amortizationRate(loan, ltv, input.gross_yearly_income);
+    amortizationRate(loan, ltv);
 
   const yearlyInterest = loan * (input.interest_rate / 100);
   const monthlyInterestGross = yearlyInterest / 12;

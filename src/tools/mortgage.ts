@@ -7,8 +7,8 @@ import { calculateSwedishMortgage } from '../mortgage.js';
  * `hemnet_calculate_mortgage` — local-only Swedish mortgage cost.
  *
  * No network. Models the Swedish monthly housing cost: interest +
- * legally-mandated amortisation (amorteringskrav, derived from LTV and an
- * optional debt-ratio surcharge) + BRF fee/operating cost, and reports
+ * legally-mandated amortisation (amorteringskrav, derived from LTV) +
+ * BRF fee/operating cost, and reports
  * both gross and after-tax (ränteavdrag) totals. See src/mortgage.ts for
  * the rules.
  */
@@ -18,7 +18,7 @@ export function registerMortgageTools(server: McpServer): void {
     {
       title: 'Calculate a Swedish monthly mortgage cost',
       description:
-        'Local-only Swedish mortgage calculator (all amounts SEK). Returns the monthly cost broken into interest, mandated amortisation (amorteringskrav from LTV + a debt-ratio surcharge when income is given), BRF fee (avgift), and operating cost — with both gross and after-tax (ränteavdrag) totals. Provide `down_payment` OR `down_payment_percent` (defaults to the legal 15% minimum). No network call.',
+        'Local-only Swedish mortgage calculator (all amounts SEK). Returns the monthly cost broken into interest, mandated amortisation (amorteringskrav from LTV, rules as of 1 April 2026), BRF fee (avgift), and operating cost — with both gross and after-tax (ränteavdrag) totals. Provide `down_payment` OR `down_payment_percent` (defaults to the legal 10% minimum). No network call.',
       annotations: {
         title: 'Calculate a Swedish monthly mortgage cost',
         readOnlyHint: true,
@@ -37,7 +37,7 @@ export function registerMortgageTools(server: McpServer): void {
           .min(0)
           .max(100)
           .optional()
-          .describe('Percent of price; defaults to the legal 15% minimum.'),
+          .describe('Percent of price; defaults to the legal 10% minimum.'),
         monthly_fee: z
           .number()
           .nonnegative()
@@ -52,7 +52,7 @@ export function registerMortgageTools(server: McpServer): void {
           .number()
           .nonnegative()
           .optional()
-          .describe('Gross household income/year in SEK — enables the +1% debt-ratio amortisation surcharge.'),
+          .describe('Deprecated and ignored: income no longer affects amortisation (the debt-ratio rule was abolished 1 April 2026).'),
         amortization_rate: z
           .number()
           .nonnegative()

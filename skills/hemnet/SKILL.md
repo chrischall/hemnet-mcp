@@ -53,9 +53,10 @@ Then pass a `location_id` into the search tools — or pass a free-text
 ## Local calculation
 
 - `hemnet_calculate_mortgage` — Swedish monthly cost (SEK): interest +
-  mandated amortisation (amorteringskrav from LTV, +1% debt-ratio
-  surcharge when `gross_yearly_income` is given) + BRF fee/operating
-  cost, with both gross and after-tax (ränteavdrag) totals. No network.
+  mandated amortisation (amorteringskrav from LTV; rules as of 1 April
+  2026, no debt-ratio rule) + BRF fee/operating cost, with both gross and
+  after-tax (ränteavdrag) totals. Down payment defaults to the legal 10%
+  minimum. No network.
 
 ## Diagnostics
 
