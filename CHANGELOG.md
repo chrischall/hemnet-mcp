@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.1.3](https://github.com/chrischall/hemnet-mcp/compare/v1.1.2...v1.1.3) (2026-09-23)
+
+
+### Bug Fixes
+
+* **deps:** require zod ^4.6.5 to match @chrischall/mcp-utils 2.4.0 ([#104](https://github.com/chrischall/hemnet-mcp/issues/104)) ([4976983](https://github.com/chrischall/hemnet-mcp/commit/4976983d5ca03255308b635feccdd8653694bf36))
+* **deps:** upgrade @chrischall/mcp-utils to 2.4.0 and @fetchproxy/* to 3.2.0 ([#99](https://github.com/chrischall/hemnet-mcp/issues/99)) ([499b8ac](https://github.com/chrischall/hemnet-mcp/commit/499b8acaf1dd5a898eb6a72431979711684abda5))
+* **fetchproxy:** an escaped """ in a GraphQL block string can no longer hide a mutation ([#105](https://github.com/chrischall/hemnet-mcp/issues/105)) ([a1cf84d](https://github.com/chrischall/hemnet-mcp/commit/a1cf84d011fb714a700c7e71900fe3d27ddb5a71)), closes [#103](https://github.com/chrischall/hemnet-mcp/issues/103)
+* **fetchproxy:** never treat a comment-prefixed GraphQL mutation as read-only ([#102](https://github.com/chrischall/hemnet-mcp/issues/102)) ([edd145c](https://github.com/chrischall/hemnet-mcp/commit/edd145c9ca052d3179ec7391b06fc467e94da3f8))
+
 ## [1.1.2](https://github.com/chrischall/hemnet-mcp/compare/v1.1.1...v1.1.2) (2026-09-21)
 
 
