@@ -167,10 +167,16 @@ node dist/index.js     # launch the stdio server
   (`APARTMENTS`, `HOUSES`, `ROW_HOUSES`, `VACATION_HOMES`, `PLOTS`,
   `OTHERS`). Sort enums (`ListingSearchForSaleSorting`/`SaleSearchSorting`)
   only expose `NEWEST`/`OLDEST`.
-- **The number-drop in address matching**: realty-core's `tokenize`
-  drops a street number that isn't the first token, and the numeric
-  anchor only fires on surviving numeric tokens — relevant when reasoning
-  about `hemnet_get_by_address` recall.
+- **Address matching anchors on the house number** (realty-core ≥ 0.4.8,
+  `addressMatch`): the house number is the first `\d+[a-z]?` token
+  whether it leads or trails, so "Storgatan 12" must match 12 (not 14)
+  and "Kungsgatan 3A" must match 3A (not 3 or 3B). Unit and floor
+  designators ("3 tr", "lgh 1201") are stripped before scoring, so a
+  floor on the query side never rejects a street-only listing, but two
+  different unit ids do. Relevant when reasoning about
+  `hemnet_get_by_address` recall and precision. (Before 0.4.7 the
+  trailing number was dropped and any listing on the street matched;
+  fleet-audit#214/#917.)
 
 ## Library use (realty-meta)
 
