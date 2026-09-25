@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.5](https://github.com/chrischall/hemnet-mcp/compare/v1.1.4...v1.1.5) (2026-09-25)
+
+
+### Bug Fixes
+
+* **deps:** take realty-core 0.4.8 address matching (wrong house, unit numbers) ([#111](https://github.com/chrischall/hemnet-mcp/issues/111)) ([89745e5](https://github.com/chrischall/hemnet-mcp/commit/89745e5079072520b0be78fed6ff1582e4e988d3))
+
 ## [1.1.4](https://github.com/chrischall/hemnet-mcp/compare/v1.1.3...v1.1.4) (2026-09-23)
 
 
