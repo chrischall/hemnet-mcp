@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.6](https://github.com/chrischall/hemnet-mcp/compare/v1.1.5...v1.1.6) (2026-09-25)
+
+
+### Documentation
+
+* **claude:** describe realty-core's house-number anchoring in address matching ([#114](https://github.com/chrischall/hemnet-mcp/issues/114)) ([8e21947](https://github.com/chrischall/hemnet-mcp/commit/8e2194745efaca32a45719c0253dd63f52aaaa40))
+
 ## [1.1.5](https://github.com/chrischall/hemnet-mcp/compare/v1.1.4...v1.1.5) (2026-09-25)
 
 
