@@ -27,8 +27,8 @@ describe('hemnet_get_by_address', () => {
   });
 
   it('keeps the highest-scoring candidate when several match', async () => {
-    // Multi-word street (no numeric token, which the matcher drops when not
-    // leading) so a partial match (2/3) and an exact match (3/3) both clear
+    // Multi-word street with no house number (a number would be a hard
+    // anchor) so a partial match (2/3) and an exact match (3/3) both clear
     // the >0.5 threshold — exercising the score comparison in both
     // directions: upgrade to a higher score, then reject a lower later one.
     const partial = { ...HOUSE_CARD, id: 'partial', streetAddress: 'Storgatan Alfa' };
@@ -50,6 +50,52 @@ describe('hemnet_get_by_address', () => {
     const body = parseToolResult<{ listing: { id: string }; score: number }>(res);
     expect(body.listing.id).toBe('exact');
     expect(body.score).toBe(1);
+    await h.close();
+  });
+
+  it('anchors on the trailing house number: "Storgatan 12" never resolves to 14, "Kungsgatan 3A" never to 3 (fleet-audit#917)', async () => {
+    // Swedish addresses put the number LAST. realty-core <0.4.7 dropped a
+    // trailing short number, so every Storgatan listing scored 1.0 and the
+    // newest (a different flat) came back as a verified match. <0.4.8 also
+    // dropped a letter-suffixed number ("3A") and hard-rejected a floor
+    // suffix ("12, 3 tr"). The wrong houses come FIRST so a bad matcher
+    // would stop on them.
+    const at = (id: string, streetAddress: string) => ({ ...HOUSE_CARD, id, streetAddress });
+    const client = routedClient({
+      AutocompleteLocations: { data: { autocompleteLocations: { hits: [LOCATION_HIT] } } },
+      SearchForSale: {
+        data: {
+          searchForSaleListings: {
+            total: 4,
+            listings: [
+              at('storgatan-14', 'Storgatan 14'),
+              at('storgatan-12', 'Storgatan 12'),
+              at('kungsgatan-3', 'Kungsgatan 3'),
+              at('kungsgatan-3a', 'Kungsgatan 3A'),
+            ],
+          },
+        },
+      },
+    });
+    const h = await createTestHarness((s) => registerByAddressTools(s, client));
+    const resolve = async (address: string) =>
+      parseToolResult<{ resolved: boolean; score?: number; listing?: { id: string } }>(
+        await h.callTool('hemnet_get_by_address', { address, location: 'Södertälje' }),
+      );
+
+    const storgatan = await resolve('Storgatan 12');
+    expect(storgatan.listing?.id).toBe('storgatan-12');
+    expect(storgatan.score).toBe(1);
+
+    const kungsgatan = await resolve('Kungsgatan 3A');
+    expect(kungsgatan.listing?.id).toBe('kungsgatan-3a');
+
+    // A floor suffix on the query ("3 tr") is stripped, not a hard reject.
+    const floor = await resolve('Storgatan 12, 3 tr');
+    expect(floor.listing?.id).toBe('storgatan-12');
+
+    // No listing at number 16 → a miss, never the neighbour.
+    expect((await resolve('Storgatan 16')).resolved).toBe(false);
     await h.close();
   });
 
