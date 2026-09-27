@@ -95,7 +95,7 @@ async function hardHttpError(res: Response): Promise<HardHttpError> {
     return new CloudflareChallengeError(
       `Hemnet GraphQL HTTP ${res.status} — Cloudflare bot challenge` +
         `${diag ? ` (${diag})` : ''}. Hemnet challenges non-browser clients; ` +
-        'requests must ride a real browser session (fetchproxy bridge).',
+        'requests must ride a real browser session (ContextMint Bridge).',
     );
   }
   return new HardHttpError(

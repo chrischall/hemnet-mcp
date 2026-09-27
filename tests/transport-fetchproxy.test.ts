@@ -112,7 +112,9 @@ describe('HemnetFetchproxyTransport', () => {
     const t = new HemnetFetchproxyTransport({ bridge });
     const err = await t.graphql('q', {}).catch((e: unknown) => e);
     expect((err as Error).message).toContain('Hemnet bridge:');
-    expect((err as Error).message).toMatch(/service worker|tab for this domain/);
+    expect((err as Error).message).toContain(
+      "ContextMint Bridge's service worker is not responding",
+    );
     // The typed error survives as `cause` so a healthcheck can classify it.
     expect((err as Error).cause).toBe(original);
   });

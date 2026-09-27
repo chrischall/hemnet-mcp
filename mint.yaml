@@ -15,8 +15,8 @@ env:
   - name: HEMNET_TRANSPORT
     required: false
     help: >-
-      Selects the transport used to reach the site (e.g. the fetchproxy bridge
-      vs a direct fetch). Leave unset for the default.
+      Selects the transport used to reach the site (e.g. the ContextMint Bridge
+      browser extension vs a direct fetch). Leave unset for the default.
   - name: HEMNET_WS_PORT
     required: false
     help: >-

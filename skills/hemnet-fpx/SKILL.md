@@ -31,10 +31,11 @@ fpx pair -p hemnet                        # prints a pair code → approve in Co
 
 Requirements: the **ContextMint Bridge** browser extension installed (from
 [its releases](https://github.com/nullnet-app/contextmint-bridge/releases) —
-Chrome: load the chrome zip unpacked; Safari: ships inside the ContextMint
-app), with an open
+Chrome: load the chrome zip unpacked; Safari isn't available yet, so use
+Chrome for now), with an open
 `www.hemnet.se` tab, and its Chrome **Site access** allowing `hemnet.se`.
 Pairing persists — after the first approval every later `fpx` call reuses it.
+ContextMint Bridge is the renamed fetchproxy extension (same maintainer; source at https://github.com/nullnet-app/contextmint-bridge — verify a release zip with `shasum -a 256 -c contextmint-bridge-chrome-<version>.zip.sha256`).
 
 ## Core call
 
