@@ -51,8 +51,17 @@ When that happens the server switches (under the default
 queries from a `www.hemnet.se` tab in your own browser — no Hemnet login
 needed. That needs the **ContextMint Bridge** extension, installed from
 [its releases](https://github.com/nullnet-app/contextmint-bridge/releases):
-in Chrome, unzip the chrome zip and load it unpacked; in Safari it ships
-inside the ContextMint app. Approve the pairing prompt the first time.
+in Chrome, unzip the chrome zip and load it unpacked, then approve the
+pairing prompt the first time. Safari isn't available yet (it will ship
+inside the ContextMint app, which has no public download), so use Chrome
+for now.
+
+ContextMint Bridge is the fetchproxy browser extension under its new name,
+from the same maintainer — fetchproxy's own README
+(https://github.com/chrischall/fetchproxy#extension) points to it. Its source
+is public at https://github.com/nullnet-app/contextmint-bridge: build it
+yourself, or check a release zip against the `.sha256` file published beside
+it (`shasum -a 256 -c contextmint-bridge-chrome-<version>.zip.sha256`).
 
 ### From source
 
