@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { FetchproxySessionNotReadyError } from '@chrischall/mcp-utils/fetchproxy';
+import { FetchproxyCapabilityUnavailableError } from '@fetchproxy/server';
 import {
   createTestHarness,
   parseToolResult,
@@ -84,7 +85,7 @@ describe('hemnet_healthcheck on the direct path', () => {
     expect(body.error?.message).toMatch(/Cloudflare bot challenge/);
     expect(body.hint).toMatch(/HEMNET_TRANSPORT=fetchproxy/);
     expect(body.hint).toMatch(/www\.hemnet\.se tab open \(no login needed\)/);
-    expect(body.hint).toMatch(/Transporter pairing prompt/);
+    expect(body.hint).toMatch(/ContextMint Bridge pairing prompt/);
     expect(body.probe.status).toBeUndefined();
   });
 
@@ -185,6 +186,22 @@ describe('hemnet_healthcheck on the fetchproxy path', () => {
     expect(body.transport).toEqual({ transport: 'fetchproxy', mode: 'fetchproxy' });
     expect(body.bridge?.session_state).toBe('no_session');
     expect(body.hint).toMatch(/never confirmed a session/);
+  });
+
+  it('reports a browser that cannot serve the capability as capability_unavailable, not an MCP fault', async () => {
+    const bridge = fakeBridge({
+      fetch: async () => {
+        throw new FetchproxyCapabilityUnavailableError(
+          'capability "fetch" is unavailable in this browser (safari)',
+          { capability: 'fetch', platform: 'safari' },
+        );
+      },
+    });
+    const body = await runHealthcheck(new HemnetFetchproxyTransport({ bridge }));
+    expect(body.ok).toBe(false);
+    expect(body.error?.kind).toBe('capability_unavailable');
+    expect(body.hint).toMatch(/this browser/i);
+    expect(body.hint).not.toMatch(/HEMNET_TRANSPORT/);
   });
 
   it('classifies the bridge leg\'s non-JSON challenge page as cloudflare_challenge (#56)', async () => {
