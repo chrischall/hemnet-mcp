@@ -3,6 +3,7 @@ import {
   classifyBridgeError,
   registerBridgeHealthcheckTool,
 } from '@chrischall/mcp-utils/fetchproxy';
+import { FetchproxyCapabilityUnavailableError } from '@fetchproxy/server';
 import type { HemnetClient } from '../client.js';
 import { CloudflareChallengeError } from '../transport-direct.js';
 import { BridgeHttpStatusError } from '../transport-fetchproxy.js';
@@ -51,7 +52,7 @@ export function registerHealthcheckTools(
 }
 
 const CLOUDFLARE_HINT =
-  'Hemnet is serving a Cloudflare bot challenge. Set HEMNET_TRANSPORT=fetchproxy (or leave it at the default "auto"), keep a www.hemnet.se tab open (no login needed), and approve the Transporter pairing prompt if one appears.';
+  'Hemnet is serving a Cloudflare bot challenge. Set HEMNET_TRANSPORT=fetchproxy (or leave it at the default "auto"), keep a www.hemnet.se tab open (no login needed), and approve the ContextMint Bridge pairing prompt if one appears.';
 
 /**
  * Site-specific classification of the probe's throw. Two cases the shared
@@ -81,6 +82,12 @@ function classifyThrown(
   // status, not a bridge fault) — file it as `http` rather than `unknown`.
   if (cause instanceof BridgeHttpStatusError) {
     return { kind: 'http' };
+  }
+  // The paired browser lacks the API this request needs (fetchproxy 3.3+).
+  // fetchproxy's own discriminator files it under `protocol`, whose hint
+  // blames a version mismatch; it is a browser limit, so say that instead.
+  if (cause instanceof FetchproxyCapabilityUnavailableError) {
+    return { kind: 'capability_unavailable', hint: cause.hint };
   }
   if (cause === undefined) return undefined;
   const kind = classifyBridgeError(cause);

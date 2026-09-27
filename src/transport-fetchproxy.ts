@@ -1,7 +1,7 @@
 /**
  * Browser-bridge Hemnet transport: each GraphQL POST runs as a
  * same-origin fetch inside the user's own www.hemnet.se tab via the
- * fetchproxy bridge (`@fetchproxy/server` + the Transporter extension).
+ * fetchproxy bridge (`@fetchproxy/server` + the ContextMint Bridge extension).
  *
  * Why this exists: verified live 2026-07-13, Hemnet fronts the whole
  * www.hemnet.se zone — including `/graphql` — with a Cloudflare managed
@@ -119,7 +119,7 @@ export function isReadOnlyOperation(document: string): boolean {
 
 /**
  * The whole fetchproxy fleet shares ONE concentrator port — the
- * Transporter extension dials it, and servers host/peer-elect on it.
+ * ContextMint Bridge extension dials it, and servers host/peer-elect on it.
  * Never default to a "unique" port; override only for test isolation.
  */
 const DEFAULT_WS_PORT = 37_149;

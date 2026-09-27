@@ -17,7 +17,8 @@ calculation — all from Claude.
 ## Highlights
 
 - **No configuration.** Hemnet serves its read queries anonymously — no
-  login, no API key, no browser extension. `npx hemnet-mcp` just works.
+  login, no API key. `npx hemnet-mcp` just works (a browser extension is
+  only needed if Hemnet serves a Cloudflare challenge — see below).
 - **Sold prices (slutpriser).** Hemnet's signature dataset: achieved
   final price, asking price, and over/under-asking percentage — the comps
   an agent needs to value a home.
@@ -41,6 +42,17 @@ calculation — all from Claude.
   }
 }
 ```
+
+### If Hemnet serves a Cloudflare challenge
+
+Hemnet sometimes fronts its GraphQL API with a Cloudflare bot challenge.
+When that happens the server switches (under the default
+`HEMNET_TRANSPORT=auto`) to a browser bridge that sends the same anonymous
+queries from a `www.hemnet.se` tab in your own browser — no Hemnet login
+needed. That needs the **ContextMint Bridge** extension, installed from
+[its releases](https://github.com/nullnet-app/contextmint-bridge/releases):
+in Chrome, unzip the chrome zip and load it unpacked; in Safari it ships
+inside the ContextMint app. Approve the pairing prompt the first time.
 
 ### From source
 
