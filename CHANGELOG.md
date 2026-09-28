@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.6](https://github.com/chrischall/hemnet-mcp/compare/v1.1.5...v1.1.6) (2026-09-27)
+
+
+### Bug Fixes
+
+* **deps:** move to [@fetchproxy](https://github.com/fetchproxy) 3.4 for ContextMint Bridge errors, capability subsets and managed pins ([#116](https://github.com/chrischall/hemnet-mcp/issues/116)) ([37ad920](https://github.com/chrischall/hemnet-mcp/commit/37ad92098cc22968dd9efc1e262fda2450031395))
+* **deps:** move to @chrischall/mcp-utils 2.8 and [@fetchproxy](https://github.com/fetchproxy) 3.4.1 for clearer browser-bridge errors ([#117](https://github.com/chrischall/hemnet-mcp/issues/117)) ([dea8d4f](https://github.com/chrischall/hemnet-mcp/commit/dea8d4f94cb266641e982261779922c97e01b2ea))
+
+
+### Documentation
+
+* **claude:** describe realty-core's house-number anchoring in address matching ([#114](https://github.com/chrischall/hemnet-mcp/issues/114)) ([8e21947](https://github.com/chrischall/hemnet-mcp/commit/8e2194745efaca32a45719c0253dd63f52aaaa40))
+
 ## [1.1.5](https://github.com/chrischall/hemnet-mcp/compare/v1.1.4...v1.1.5) (2026-09-25)
 
 

@@ -20,7 +20,7 @@ import { HemnetClient } from './client.js';
 import { createDefaultTransport } from './transport-fallback.js';
 import { registerHemnetTools } from './tools/index.js';
 
-const VERSION = '1.1.5'; // x-release-please-version
+const VERSION = '1.1.6'; // x-release-please-version
 
 const client = new HemnetClient({
   transport: createDefaultTransport({ version: VERSION }),
