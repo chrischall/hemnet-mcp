@@ -14,62 +14,62 @@
  * `HEMNET_TRANSPORT` pins a mode: `direct` (fail hard when walled),
  * `fetchproxy` (always ride the tab), `auto` (this fallback — default).
  */
-import { readEnvVar } from '@chrischall/mcp-utils';
-import type { BridgeHealthcheckTransport } from '@chrischall/mcp-utils/fetchproxy';
+import {
+  createDirectFirstTransport,
+  readTransportMode,
+  type BridgeHealthcheckTransport,
+  type DirectFirstTransport,
+} from '@chrischall/mcp-utils/fetchproxy';
 import type {
   GraphQLResponse,
   HemnetTransport,
   TransportStatus,
 } from './transport.js';
-import { CloudflareChallengeError, DirectTransport } from './transport-direct.js';
+import { DirectTransport } from './transport-direct.js';
 import type { DirectTransportOptions } from './transport-direct.js';
 import { HemnetFetchproxyTransport } from './transport-fetchproxy.js';
 
+/**
+ * The `auto` router, as a {@link HemnetTransport}. The routing itself — try
+ * direct, switch to the bridge on the first CDN/WAF refusal (any
+ * `EdgeBlockedError`, which `CloudflareChallengeError` is), re-run that call
+ * there, stay there, build the bridge once — is mcp-utils'
+ * `createDirectFirstTransport` (fleet-audit#1020); this class only adapts
+ * it to the one-method transport interface and keeps the constructor
+ * library consumers already call.
+ */
 export class FallbackTransport implements HemnetTransport {
-  private walled = false;
-  private bridge: HemnetTransport | undefined;
+  private readonly legs: DirectFirstTransport<HemnetTransport, HemnetTransport>;
 
-  constructor(
-    private readonly direct: HemnetTransport,
-    private readonly bridgeFactory: () => HemnetTransport,
-  ) {}
+  constructor(direct: HemnetTransport, bridgeFactory: () => HemnetTransport) {
+    this.legs = createDirectFirstTransport<HemnetTransport>({
+      direct,
+      bridge: bridgeFactory,
+      mode: 'auto',
+      serverName: 'hemnet-mcp',
+      hostLabel: 'www.hemnet.se (no login needed)',
+    });
+  }
 
-  async graphql<T>(
+  graphql<T>(
     query: string,
     variables: Record<string, unknown>,
   ): Promise<GraphQLResponse<T>> {
-    if (!this.walled) {
-      try {
-        return await this.direct.graphql<T>(query, variables);
-      } catch (err) {
-        if (!(err instanceof CloudflareChallengeError)) throw err;
-        this.walled = true;
-        console.error(
-          '[hemnet-mcp] Direct fetch got a Cloudflare challenge — switching to ' +
-            'the fetchproxy browser bridge for the rest of this session. Keep a ' +
-            'www.hemnet.se tab open (no login needed) and approve the pairing ' +
-            'prompt in the ContextMint Bridge extension if one appears.',
-        );
-      }
-    }
-    this.bridge ??= this.bridgeFactory();
-    return this.bridge.graphql<T>(query, variables);
+    return this.legs.run((leg) => leg.graphql<T>(query, variables));
   }
 
   /**
-   * The path the next request rides. `bridge` is only ever built after the
-   * switch, so its presence IS the walled state; `mode` is always `auto`
-   * here so a reader can tell "on the bridge by fallback" from "pinned".
+   * The path the next request rides, `mode: 'auto'` (so a reader can tell
+   * "on the bridge by fallback" from "pinned"), and `blocked_by` once a
+   * CDN/WAF refusal forced the switch.
    */
   status(): TransportStatus {
-    const active = this.bridge ?? this.direct;
-    const inner = active.status?.() ?? { transport: 'unknown' as const };
-    return { ...inner, mode: 'auto' };
+    return this.legs.status();
   }
 
   /** The bridge once the fallback has built it; `undefined` while direct. */
   bridgeTransport(): BridgeHealthcheckTransport | undefined {
-    return this.bridge?.bridgeTransport?.();
+    return this.legs.bridgeTransport();
   }
 }
 
@@ -82,8 +82,9 @@ export interface DefaultTransportOptions extends DirectTransportOptions {
 
 /**
  * Build the transport `index.ts` (and library consumers) should use:
- * mode from `HEMNET_TRANSPORT`, defaulting to the direct-with-fallback
- * combination above. Unknown values warn to stderr and mean `auto`.
+ * mode from `HEMNET_TRANSPORT` (read by mcp-utils' `readTransportMode`:
+ * case-insensitive; an unknown value warns to stderr and means `auto`),
+ * defaulting to the direct-with-fallback combination above.
  *
  * `DefaultTransportOptions` extends `DirectTransportOptions`, so the
  * wire-level knobs (`endpoint`, `timeoutMs`, `maxRetries`, `fetchImpl`,
@@ -98,14 +99,10 @@ export function createDefaultTransport(
   const bridgeFactory =
     opts.bridgeFactory ??
     (() => new HemnetFetchproxyTransport({ version: opts.version }));
-  const mode = readEnvVar('HEMNET_TRANSPORT') ?? 'auto';
+  const mode = readTransportMode('HEMNET_TRANSPORT', {
+    log: (message) => console.error(`[hemnet-mcp] ${message}`),
+  });
   if (mode === 'direct') return direct;
   if (mode === 'fetchproxy') return bridgeFactory();
-  if (mode !== 'auto') {
-    console.error(
-      `[hemnet-mcp] Unknown HEMNET_TRANSPORT value "${mode}" — using "auto" ` +
-        '(direct fetch with browser-bridge fallback).',
-    );
-  }
   return new FallbackTransport(direct, bridgeFactory);
 }

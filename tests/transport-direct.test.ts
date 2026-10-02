@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { EdgeBlockedError } from '@chrischall/mcp-utils';
 import {
   CloudflareChallengeError,
   DirectTransport,
@@ -179,6 +180,63 @@ describe('DirectTransport', () => {
     );
     const t = new DirectTransport({ fetchImpl });
     await expect(t.graphql('q', {})).rejects.toThrow('Hemnet GraphQL HTTP 400');
+  });
+
+  it('types a challenge as the shared EdgeBlockedError (vendor Cloudflare)', async () => {
+    const fetchImpl = vi.fn(async () =>
+      textResponse(403, '<title>Just a moment...</title>', { 'cf-mitigated': 'challenge' }),
+    );
+    const err = await new DirectTransport({ fetchImpl }).graphql('q', {}).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(EdgeBlockedError);
+    expect((err as EdgeBlockedError).vendor).toBe('Cloudflare');
+    expect((err as EdgeBlockedError).status).toBe(403);
+  });
+
+  it('detects a challenge served as 429 instead of retrying it (fleet-audit#1019)', async () => {
+    const fetchImpl = vi.fn(async () =>
+      textResponse(429, 'rate limited', { 'cf-mitigated': 'challenge' }),
+    );
+    const t = new DirectTransport({ fetchImpl, maxRetries: 3 });
+    const err = await t.graphql('q', {}).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(CloudflareChallengeError);
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it('detects the legacy JS challenge served as 503 (fleet-audit#1019)', async () => {
+    const fetchImpl = vi.fn(async () =>
+      textResponse(503, '<html><script>window._cf_chl_opt = {};</script></html>'),
+    );
+    const t = new DirectTransport({ fetchImpl, maxRetries: 3 });
+    const err = await t.graphql('q', {}).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(CloudflareChallengeError);
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it('detects a challenge page served as a 2xx instead of retrying it as a blip (fleet-audit#490)', async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      text: async () => '<!DOCTYPE html><title>Just a moment...</title>',
+    }) as unknown as Response);
+    const t = new DirectTransport({ fetchImpl, maxRetries: 3 });
+    const err = await t.graphql('q', {}).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(CloudflareChallengeError);
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it('fails a non-JSON, non-challenge 2xx hard with the body head, without retrying', async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      text: async () => '<html>maintenance</html>',
+    }) as unknown as Response);
+    const t = new DirectTransport({ fetchImpl, maxRetries: 3 });
+    const err = await t.graphql('q', {}).catch((e: unknown) => e);
+    expect(err).not.toBeInstanceOf(CloudflareChallengeError);
+    expect((err as Error).message).toMatch(/non-JSON.*maintenance/);
+    expect(fetchImpl).toHaveBeenCalledOnce();
   });
 
   it('constructs with all defaults', () => {

@@ -14,6 +14,7 @@
  * User-Agent identifies the client honestly rather than impersonating a
  * browser.
  */
+import { EdgeBlockedError, detectEdgeBlock } from '@chrischall/mcp-utils';
 import type {
   GraphQLResponse,
   HemnetTransport,
@@ -43,61 +44,81 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
- * A non-retryable HTTP failure (a 4xx other than 429). Thrown from inside
- * the retry loop's `try` so the `catch` can tell it apart from a
- * retryable network/abort error and propagate it immediately.
+ * A non-retryable HTTP failure (a 4xx other than 429, or a 2xx that isn't
+ * JSON). Thrown from inside the retry loop's `try` so the `catch` can tell
+ * it apart from a retryable network/abort error and propagate it
+ * immediately.
  */
 class HardHttpError extends Error {}
 
 /**
- * Hemnet answered with a Cloudflare bot challenge instead of GraphQL.
- * Observed live 2026-07-13: the whole www.hemnet.se zone (including
- * `/graphql`) serves a managed challenge (`cf-mitigated: challenge`,
- * `_cf_chl_opt` interstitial) to non-browser clients regardless of
- * headers — only a real browser session clears it. Callers use this type
- * to fall back to the fetchproxy browser bridge.
+ * Hemnet's CDN/WAF refused the request instead of answering GraphQL —
+ * observed live 2026-07-13: the whole www.hemnet.se zone (including
+ * `/graphql`) serves a Cloudflare managed challenge (`cf-mitigated:
+ * challenge`, `_cf_chl_opt` interstitial) to non-browser clients regardless
+ * of headers; only a real browser session clears it.
+ *
+ * It IS the shared `EdgeBlockedError` (fleet-audit#1020), so
+ * `createDirectFirstTransport` falls back to the browser bridge on it and the
+ * shared healthcheck reads its vendor, while keeping this repo's diagnostic
+ * message (status, `server` / `cf-ray` / `cf-mitigated`). The class name is
+ * kept for library consumers and for `hemnet_healthcheck`'s
+ * `cloudflare_challenge` kind.
  */
-export class CloudflareChallengeError extends HardHttpError {}
-
-/**
- * Definitive challenge markers only (per fleet guidance): the
- * `cf-mitigated: challenge` response header, or the interstitial's
- * `_cf_chl_opt` script / "Just a moment" title in the body. Do NOT match
- * `challenges.cloudflare.com` — Cloudflare inlines that on cleared pages.
- */
-function isCloudflareChallenge(res: Response, bodyHead: string): boolean {
-  return (
-    res.headers.get('cf-mitigated') === 'challenge' ||
-    bodyHead.includes('_cf_chl_opt') ||
-    bodyHead.includes('<title>Just a moment')
-  );
+export class CloudflareChallengeError extends EdgeBlockedError {
+  constructor(message: string, status = 403, vendor = 'Cloudflare') {
+    super(status, vendor, { service: 'Hemnet', method: 'POST', path: '/graphql' });
+    this.name = 'CloudflareChallengeError';
+    this.message = message;
+  }
 }
 
-/**
- * Build the diagnostic error for a non-retryable HTTP failure: status,
- * the `server` / `cf-ray` / `cf-mitigated` headers when present, and the
- * first ~200 chars of the body — a bare "HTTP 403" hides which failure
- * mode (bot wall vs. moved endpoint vs. bad request) you're in.
- */
-async function hardHttpError(res: Response): Promise<HardHttpError> {
-  let bodyHead = '';
+/** Read the body for diagnostics; best-effort (the status alone still tells the story). */
+async function readBodySafely(res: Response): Promise<string> {
   try {
-    bodyHead = (await res.text()).slice(0, 200);
+    return await res.text();
   } catch {
-    // Diagnostics are best-effort; the status alone still tells the story.
+    return '';
   }
-  const diag = ['server', 'cf-ray', 'cf-mitigated']
+}
+
+/** `server` / `cf-ray` / `cf-mitigated` headers, for error messages. */
+function diagnostics(res: Response): string {
+  return ['server', 'cf-ray', 'cf-mitigated']
     .map((name) => ({ name, value: res.headers.get(name) }))
     .filter((h) => h.value)
     .map((h) => `${h.name}: ${h.value}`)
     .join('; ');
-  if (isCloudflareChallenge(res, bodyHead)) {
-    return new CloudflareChallengeError(
-      `Hemnet GraphQL HTTP ${res.status} — Cloudflare bot challenge` +
-        `${diag ? ` (${diag})` : ''}. Hemnet challenges non-browser clients; ` +
-        'requests must ride a real browser session (ContextMint Bridge).',
-    );
-  }
+}
+
+/**
+ * The challenge error for a response the shared `detectEdgeBlock` judges to
+ * be a CDN/WAF refusal (the `cf-mitigated` header, or a vendor's page
+ * markers — Cloudflare's challenge markers at ANY status, since Cloudflare
+ * serves rate-limit blocks as 429 and the legacy JS challenge as 503), or
+ * `undefined` when it isn't one.
+ */
+function edgeBlockError(res: Response, body: string): CloudflareChallengeError | undefined {
+  const edge = detectEdgeBlock({ body, headers: res.headers, status: res.status });
+  if (!edge) return undefined;
+  const diag = diagnostics(res);
+  return new CloudflareChallengeError(
+    `Hemnet GraphQL HTTP ${res.status} — ${edge.vendor} bot challenge` +
+      `${diag ? ` (${diag})` : ''}. Hemnet challenges non-browser clients; ` +
+      'requests must ride a real browser session (ContextMint Bridge).',
+    res.status,
+    edge.vendor,
+  );
+}
+
+/**
+ * The diagnostic error for a non-retryable HTTP failure: status, the
+ * diagnostic headers when present, and the first ~200 chars of the body —
+ * a bare "HTTP 403" hides which failure mode (bot wall vs. moved endpoint
+ * vs. bad request) you're in.
+ */
+function hardHttpError(res: Response, bodyHead: string): HardHttpError {
+  const diag = diagnostics(res);
   return new HardHttpError(
     `Hemnet GraphQL HTTP ${res.status}${diag ? ` (${diag})` : ''}` +
       `${bodyHead ? ` — body starts: ${bodyHead}` : ''}`,
@@ -148,19 +169,38 @@ export class DirectTransport implements HemnetTransport {
         });
 
         if (res.ok) {
-          return (await res.json()) as GraphQLResponse<T>;
+          // Read as text and parse here: a 2xx HTML page (a challenge
+          // interstitial, an error page) must neither surface as a bare
+          // SyntaxError nor be retried as if it were a network blip
+          // (fleet-audit#490).
+          const text = await res.text();
+          try {
+            return JSON.parse(text) as GraphQLResponse<T>;
+          } catch {
+            throw (
+              edgeBlockError(res, text) ??
+              new HardHttpError(
+                `Hemnet GraphQL HTTP ${res.status} returned non-JSON — body starts: ${text.slice(0, 200)}`,
+              )
+            );
+          }
         }
-        // A retryable status loops with backoff; any other non-2xx is a
-        // hard failure we surface immediately (no point retrying a 400,
-        // and a Cloudflare challenge rejects every non-browser attempt).
+        // Check EVERY non-OK status for a CDN/WAF refusal before deciding to
+        // retry: Cloudflare serves rate-limit blocks as 429 and the legacy JS
+        // challenge as 503, and retrying those only delays the bridge
+        // fallback (fleet-audit#1019). Reading the body also drains it on
+        // the retry path.
+        const errBody = await readBodySafely(res);
+        const blocked = edgeBlockError(res, errBody);
+        if (blocked) throw blocked;
         if (!RETRYABLE_STATUS.has(res.status)) {
-          throw await hardHttpError(res);
+          throw hardHttpError(res, errBody.slice(0, 200));
         }
         lastError = new Error(`Hemnet GraphQL HTTP ${res.status}`);
       } catch (err) {
         // A hard HTTP error is terminal — propagate at once. Network
         // errors and aborts (timeouts) fall through to the next attempt.
-        if (err instanceof HardHttpError) throw err;
+        if (err instanceof HardHttpError || err instanceof EdgeBlockedError) throw err;
         lastError = err;
       } finally {
         clearTimeout(timer);

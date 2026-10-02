@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { EdgeBlockedError } from '@chrischall/mcp-utils';
 import { CloudflareChallengeError, DirectTransport } from '../src/transport-direct.js';
 import { HemnetFetchproxyTransport } from '../src/transport-fetchproxy.js';
 import {
@@ -47,6 +48,26 @@ describe('FallbackTransport', () => {
     expect(stderr).toHaveBeenCalledWith(
       expect.stringContaining('Cloudflare'),
     );
+  });
+
+  it('falls back on any CDN/WAF refusal the shared rule recognises, not just Cloudflare', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const direct = transportThrowing(
+      new EdgeBlockedError(403, 'CloudFront', { service: 'Hemnet', method: 'POST', path: '/graphql' }),
+    );
+    const bridge = transportReturning({ via: 'bridge' });
+    const t = new FallbackTransport(direct, () => bridge);
+    expect(await t.graphql('q', {})).toEqual({ data: { via: 'bridge' } });
+    expect(t.status()).toEqual({ transport: 'fetchproxy', mode: 'auto', blocked_by: 'CloudFront' });
+  });
+
+  it('builds the bridge once for concurrent walled calls', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const direct = transportThrowing(new CloudflareChallengeError('walled'));
+    const factory = vi.fn(() => transportReturning({ via: 'bridge' }));
+    const t = new FallbackTransport(direct, factory);
+    await Promise.all([t.graphql('q', {}), t.graphql('q', {}), t.graphql('q', {})]);
+    expect(factory).toHaveBeenCalledOnce();
   });
 
   it('propagates non-challenge errors without touching the bridge', async () => {
@@ -126,12 +147,12 @@ describe('FallbackTransport.status', () => {
     };
     const t = new FallbackTransport(direct, () => bridge);
     await t.graphql('q', {});
-    expect(t.status()).toEqual({ transport: 'fetchproxy', mode: 'auto' });
+    expect(t.status()).toEqual({ transport: 'fetchproxy', mode: 'auto', blocked_by: 'Cloudflare' });
   });
 
-  it('reports unknown paths when a transport has no status()', () => {
+  it('reports the direct path even when the direct transport has no status()', () => {
     const t = new FallbackTransport(transportReturning({ ok: 1 }), vi.fn());
-    expect(t.status()).toEqual({ transport: 'unknown', mode: 'auto' });
+    expect(t.status()).toEqual({ transport: 'direct', mode: 'auto' });
   });
 });
 
