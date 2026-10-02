@@ -211,27 +211,14 @@ registered in `release-please-config.json` `extra-files`. Conventional-
 commit PR titles drive the bump (`feat:` minor, `fix:` patch, `feat!:`
 major; `chore`/`docs`/`ci`/`test`/`build`/`refactor` don't release).
 
-## Pull requests
+<!-- pr-workflow:v3 -->
+## Pull requests & release notes
 
-**Default workflow: branch + PR.** The repo squash-merges, so the **PR
-title must be a Conventional Commit** — it becomes the squash subject
-release-please parses. Don't run `gh pr merge` yourself:
-`pr-auto-review.yml` reviews every PR and arms `ready-to-merge` on a
-`pass`/`warn` verdict; `auto-merge.yml` then arms `gh pr merge --auto
---squash`. Only a `fail` blocks (override by adding the label yourself).
-Open a PR only when the change is genuinely done — it can auto-merge as
-soon as review passes.
+Fleet policy — Conventional-Commit PR titles, labels, the auto-review /
+auto-merge ladder, auto-review follow-up issues, PR timing, and release PRs —
+lives in `~/.codex/AGENTS.md`. Don't restate it here; the copies drifted.
 
-**First-party dependency bumps** (`@chrischall/mcp-utils`,
-`@chrischall/realty-core`) use `feat:`/`fix:`, not `chore:` — they ship
-real changes through us and should drive a release.
-
-### Auto-review follow-up issues
-
-When a PR's auto-review verdict is `warn` or `fail`, the
-`chrischall/workflows` pipeline opens/updates a single
-`auto-review-followup` issue and links it from the verdict comment. When
-asked to address review findings: read the verdict comment, open the
-linked issue, treat its checklist as the work list, check off only what
-you've verified fixed, and add `Closes #<issue>` to the PR body when all
-items are resolved.
+Shared technical conventions (publishing, bundling, versioning guards,
+write-verification, transport archetypes, testing traps) live in
+[`chrischall/workflows`](https://github.com/chrischall/workflows):
+`docs/fleet-conventions.md`, plus `README.md` for the CI pipeline contract.
