@@ -1,9 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/server';
-import {
-  classifyBridgeError,
-  registerBridgeHealthcheckTool,
-} from '@chrischall/mcp-utils/fetchproxy';
-import { FetchproxyCapabilityUnavailableError } from '@fetchproxy/server';
+import { registerBridgeHealthcheckTool } from '@chrischall/mcp-utils/fetchproxy';
 import type { HemnetClient } from '../client.js';
 import { CloudflareChallengeError } from '../transport-direct.js';
 import { BridgeHttpStatusError } from '../transport-fetchproxy.js';
@@ -55,41 +51,30 @@ const CLOUDFLARE_HINT =
   'Hemnet is serving a Cloudflare bot challenge. Set HEMNET_TRANSPORT=fetchproxy (or leave it at the default "auto"), keep a www.hemnet.se tab open (no login needed), and approve the ContextMint Bridge pairing prompt if one appears.';
 
 /**
- * Site-specific classification of the probe's throw. Two cases the shared
- * ladder can't see on its own:
+ * Site-specific classification of the probe's throw — only what the shared
+ * ladder can't say on its own. Everything else is mcp-utils' own: since
+ * 2.12 it unwraps a typed bridge failure that transport-fetchproxy.ts
+ * re-throws as `cause` (so `session_not_ready` / `bridge_down` / `timeout` /
+ * `capability_unavailable` keep their kinds and hints), and it names a
+ * CDN/WAF refusal `edge_blocked` — the two arms this file used to hand-roll
+ * (fleet-audit#1020).
  *
- *   - a `CloudflareChallengeError` from the direct transport (only reaches
- *     here under `HEMNET_TRANSPORT=direct`; `auto` falls back instead) →
- *     `cloudflare_challenge` with the browser-bridge remediation;
- *   - a bridge failure, which transport-fetchproxy.ts re-throws as a
- *     prefixed plain `Error` with the typed fetchproxy error as `cause` —
- *     classify the cause so `session_not_ready` / `bridge_down` / `timeout`
- *     keep their kinds (and their hint-ladder arms) instead of `unknown`.
+ *   - a `CloudflareChallengeError` — from the direct transport (only reaches
+ *     here under `HEMNET_TRANSPORT=direct`; `auto` falls back instead) or as
+ *     the bridge leg's non-JSON answer's `cause` → `cloudflare_challenge`
+ *     with the Hemnet remediation (the documented kind for this server);
+ *   - the bridge leg's non-2xx, typed `BridgeHttpStatusError` as `cause` —
+ *     an upstream HTTP status, not a bridge fault → `http`.
  */
 function classifyThrown(
   err: unknown,
 ): { kind: string; hint?: string } | undefined {
-  if (err instanceof CloudflareChallengeError) {
-    return { kind: 'cloudflare_challenge', hint: CLOUDFLARE_HINT };
-  }
   const cause = err instanceof Error ? err.cause : undefined;
-  // The bridge leg's non-JSON answer (transport-fetchproxy.ts) carries the
-  // challenge as `cause`: same wall, same remedy.
-  if (cause instanceof CloudflareChallengeError) {
+  if (err instanceof CloudflareChallengeError || cause instanceof CloudflareChallengeError) {
     return { kind: 'cloudflare_challenge', hint: CLOUDFLARE_HINT };
   }
-  // The bridge leg's non-2xx carries a typed cause (an upstream HTTP
-  // status, not a bridge fault) — file it as `http` rather than `unknown`.
   if (cause instanceof BridgeHttpStatusError) {
     return { kind: 'http' };
   }
-  // The paired browser lacks the API this request needs (fetchproxy 3.3+).
-  // fetchproxy's own discriminator files it under `protocol`, whose hint
-  // blames a version mismatch; it is a browser limit, so say that instead.
-  if (cause instanceof FetchproxyCapabilityUnavailableError) {
-    return { kind: 'capability_unavailable', hint: cause.hint };
-  }
-  if (cause === undefined) return undefined;
-  const kind = classifyBridgeError(cause);
-  return kind === 'other' ? undefined : { kind };
+  return undefined;
 }

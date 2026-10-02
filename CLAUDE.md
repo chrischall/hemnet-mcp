@@ -71,12 +71,13 @@ src/
                         #   and registrars for realty-meta. createHemnetClient().
   transport.ts          # HemnetTransport interface (graphql(query, variables))
   transport-direct.ts   # DirectTransport — direct fetch, retry/backoff; raises
-                        #   CloudflareChallengeError on a `cf-mitigated` 403
+                        #   CloudflareChallengeError (an mcp-utils EdgeBlockedError)
+                        #   when detectEdgeBlock sees a refusal, at any status
   transport-fetchproxy.ts # HemnetFetchproxyTransport — same-origin fetch inside
                         #   the user's www.hemnet.se tab via @fetchproxy/server
-  transport-fallback.ts # FallbackTransport + createDefaultTransport — direct
-                        #   first, switch to the bridge on a challenge; reads
-                        #   HEMNET_TRANSPORT (direct|fetchproxy|auto)
+  transport-fallback.ts # FallbackTransport + createDefaultTransport — adapters
+                        #   over mcp-utils createDirectFirstTransport /
+                        #   readTransportMode (HEMNET_TRANSPORT direct|fetchproxy|auto)
   client.ts             # HemnetClient — typed query methods; GraphQL errors →
                         #   McpToolError (redacted); null/typename guards
   graphql.ts            # GraphQL operation strings + raw response types +
@@ -85,7 +86,8 @@ src/
                         #   (SEK numbers, m², derived price_per_sqm)
   money.ts              # Swedish number parsing ("3 995 000 kr" → 3995000)
   url.ts                # extractListingId (trailing digits), url builders
-  stats.ts              # computeMarketStats (median/avg over sold rows)
+  stats.ts              # computeMarketStats — names Hemnet's fields for
+                        #   realty-core's shared computeMarketStats
   mortgage.ts           # calculateSwedishMortgage (amorteringskrav, ränteavdrag)
   tools/
     _shared.ts          # searchInputShape (zod) + buildSearchInput (location
@@ -106,8 +108,9 @@ probe is `client.healthcheck()`, `path` is `client.transportStatus()`
 built a bridge, after which the result carries a `bridge` block (role,
 port, `session_state`, `pending_pair_code`, …). `CloudflareChallengeError`
 is classified as `error.kind: 'cloudflare_challenge'`; bridge failures
-keep their fetchproxy kind (`session_not_ready`, `bridge_down`, …) via the
-`cause` transport-fetchproxy.ts attaches. `registerHemnetTools` in
+keep their fetchproxy kind (`session_not_ready`, `bridge_down`, …) because
+the shared healthcheck unwraps the typed `cause` transport-fetchproxy.ts
+attaches — `classifyThrown` only adds the two Hemnet-specific arms. `registerHemnetTools` in
 `tools/index.ts` wires them all up; `index.ts` and realty-meta both call
 it.
 
