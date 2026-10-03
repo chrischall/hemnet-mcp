@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.1.8](https://github.com/chrischall/hemnet-mcp/compare/v1.1.7...v1.1.8) (2026-10-03)
+
+
+### Bug Fixes
+
+* **deps:** adopt @chrischall/mcp-utils 2.12.0 direct-first transport, edge-block detection and graphql lexer ([#126](https://github.com/chrischall/hemnet-mcp/issues/126)) ([475287c](https://github.com/chrischall/hemnet-mcp/commit/475287c11f7c6748b3eb66e052a6237053d74c29))
+* **deps:** bump @chrischall/mcp-utils to 2.13.0 and realty-core to 0.6.0 ([#128](https://github.com/chrischall/hemnet-mcp/issues/128)) ([c449064](https://github.com/chrischall/hemnet-mcp/commit/c449064956059c87e6c804309518f06fcb69dfdf))
+* keep credentials and report edge_blocked on CDN/WAF blocks (mcp-utils 2.10.0) ([#125](https://github.com/chrischall/hemnet-mcp/issues/125)) ([41442c2](https://github.com/chrischall/hemnet-mcp/commit/41442c2f20a51636b861cf7210ae88f6f9568a48))
+* report CDN/WAF blocks as edge_blocked, not a rejected credential (mcp-utils 2.9.0) ([#122](https://github.com/chrischall/hemnet-mcp/issues/122)) ([cf7fd54](https://github.com/chrischall/hemnet-mcp/commit/cf7fd54ca54421ac61241cb8d4b26aa8b14f7b05))
+
+
+### Documentation
+
+* drop the self-arming instruction and point merge policy at the global file ([#127](https://github.com/chrischall/hemnet-mcp/issues/127)) ([a3b4c30](https://github.com/chrischall/hemnet-mcp/commit/a3b4c307cdcecd156eca8015a161c18c00709f39))
+
 ## [1.1.7](https://github.com/chrischall/hemnet-mcp/compare/v1.1.6...v1.1.7) (2026-10-01)
 
 
