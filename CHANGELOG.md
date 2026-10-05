@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.9](https://github.com/chrischall/hemnet-mcp/compare/v1.1.8...v1.1.9) (2026-10-05)
+
+
+### Bug Fixes
+
+* **deps:** require @chrischall/mcp-utils 2.14.0 and MCP SDK 2.3.0 ([#129](https://github.com/chrischall/hemnet-mcp/issues/129)) ([480f16e](https://github.com/chrischall/hemnet-mcp/commit/480f16ef00212305d95e2d37bd2fbb1d9dd67e98))
+
 ## [1.1.8](https://github.com/chrischall/hemnet-mcp/compare/v1.1.7...v1.1.8) (2026-10-03)
 
 
