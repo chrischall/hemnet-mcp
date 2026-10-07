@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.10](https://github.com/chrischall/hemnet-mcp/compare/v1.1.9...v1.1.10) (2026-10-07)
+
+
+### Bug Fixes
+
+* **deps:** Bump source-map-js ([#133](https://github.com/chrischall/hemnet-mcp/issues/133)) ([4a45990](https://github.com/chrischall/hemnet-mcp/commit/4a459900952bd1d8fb1b036bfa080e563f4358af))
+* **deps:** update fetchproxy to 3.6.0 and mcp-utils to 2.15.0 for confirmation and relay fixes ([#131](https://github.com/chrischall/hemnet-mcp/issues/131)) ([ff6faa6](https://github.com/chrischall/hemnet-mcp/commit/ff6faa65ae9885fecf9341bca1571432ded132f3))
+
 ## [1.1.9](https://github.com/chrischall/hemnet-mcp/compare/v1.1.8...v1.1.9) (2026-10-05)
 
 
