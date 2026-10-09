@@ -15,9 +15,11 @@ const DEFAULT_MAX_SALES = 200;
 const MAX_MAX_SALES = 500;
 
 /**
- * The market tool takes the sold-search filters but not `limit`/`offset`:
- * it pages internally, and a caller-chosen window made the stats describe
- * an arbitrary slice (fleet-audit#491).
+ * The market tool pages internally, so `max_sales` replaces the sold
+ * search's `limit`/`offset`: a caller-chosen window made the stats describe
+ * an arbitrary slice (fleet-audit#491). Both stay accepted as deprecated
+ * inputs so existing callers keep working — `limit` is read as `max_sales`
+ * and `offset` is ignored.
  */
 const { limit: _limit, offset: _offset, ...filterShape } = searchInputShape;
 
@@ -32,9 +34,22 @@ const marketInputShape = {
     .describe(
       `How many sold listings to aggregate, newest first by default (paged ${PAGE_SIZE} at a time). Default ${DEFAULT_MAX_SALES}, max ${MAX_MAX_SALES}.`,
     ),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_MAX_SALES)
+    .optional()
+    .describe('Deprecated: use `max_sales`. Read as `max_sales` when that is not given.'),
+  offset: z
+    .number()
+    .int()
+    .nonnegative()
+    .optional()
+    .describe('Deprecated and ignored: the stats always start from the first matching sale.'),
 };
 
-type MarketArgs = Omit<SearchArgs, 'limit' | 'offset'> & { max_sales?: number };
+type MarketArgs = SearchArgs & { max_sales?: number };
 
 /**
  * `hemnet_get_market_stats` — median/average sold-price statistics for a
@@ -68,7 +83,7 @@ export function registerMarketTools(
     async (args: MarketArgs) => {
       const search = await buildSearchInput(client, args);
       const sort = args.sort ?? 'NEWEST';
-      const maxSales = args.max_sales ?? DEFAULT_MAX_SALES;
+      const maxSales = args.max_sales ?? args.limit ?? DEFAULT_MAX_SALES;
 
       const cards: RawSaleCard[] = [];
       let total = 0;

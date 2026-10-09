@@ -122,15 +122,53 @@ describe('hemnet_get_market_stats', () => {
       await h.close();
     });
 
-    it('does not offer offset/limit pagination', async () => {
-      const h = await createTestHarness((s) => registerMarketTools(s, routedClient({})));
-      const { tools } = await h.client.listTools();
-      const tool = tools.find((t) => t.name === 'hemnet_get_market_stats')!;
-      const props = Object.keys(tool.inputSchema.properties ?? {});
-      expect(props).not.toContain('offset');
-      expect(props).not.toContain('limit');
-      expect(props).toContain('max_sales');
-      await h.close();
+    describe('legacy limit/offset inputs stay accepted (no breaking change)', () => {
+      it('lists limit/offset as deprecated alongside max_sales', async () => {
+        const h = await createTestHarness((s) => registerMarketTools(s, routedClient({})));
+        const { tools } = await h.client.listTools();
+        const tool = tools.find((t) => t.name === 'hemnet_get_market_stats')!;
+        const props = (tool.inputSchema.properties ?? {}) as Record<
+          string,
+          { description?: string }
+        >;
+        expect(props.max_sales).toBeDefined();
+        expect(props.limit?.description).toMatch(/deprecated/i);
+        expect(props.offset?.description).toMatch(/deprecated/i);
+        await h.close();
+      });
+
+      it('treats a legacy limit as max_sales and ignores offset', async () => {
+        const { pages, route } = pagedSales(5000);
+        const h = await createTestHarness((s) =>
+          registerMarketTools(s, routedClient({ SearchSales: route })),
+        );
+        const res = await h.callTool('hemnet_get_market_stats', {
+          location_ids: ['1'],
+          limit: 25,
+          offset: 100,
+        });
+        expect(res.isError).toBeFalsy();
+        expect(pages).toEqual([{ limit: 25, offset: 0 }]);
+        expect(parseToolResult<{ sampled_sales: number }>(res).sampled_sales).toBe(25);
+        await h.close();
+      });
+
+      it('prefers max_sales over a legacy limit', async () => {
+        const { pages, route } = pagedSales(5000);
+        const h = await createTestHarness((s) =>
+          registerMarketTools(s, routedClient({ SearchSales: route })),
+        );
+        await h.callTool('hemnet_get_market_stats', {
+          location_ids: ['1'],
+          limit: 25,
+          max_sales: 60,
+        });
+        expect(pages).toEqual([
+          { limit: 50, offset: 0 },
+          { limit: 10, offset: 50 },
+        ]);
+        await h.close();
+      });
     });
   });
 });
