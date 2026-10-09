@@ -14,7 +14,33 @@
       "version": "1.1.10",
       "transport": {
         "type": "stdio"
-      }
+      },
+      "environmentVariables": [
+        {
+          "name": "HEMNET_TRANSPORT",
+          "description": "Transport mode: `auto` (default) tries a direct anonymous fetch and switches to the ContextMint Bridge browser bridge when Hemnet serves a Cloudflare challenge; `direct` fails hard when walled; `fetchproxy` always uses the bridge.",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "HEMNET_WS_PORT",
+          "description": "Localhost port of the fetchproxy concentrator the ContextMint Bridge extension connects to (default 37149). Every MCP on one machine shares it, so move it for all of them or not at all.",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "FETCHPROXY_WS_HOST",
+          "description": "Bind interface for the fetchproxy concentrator, a literal IP only (default 127.0.0.1). Keep on loopback; it exists for hosted deployments that run each MCP in its own network namespace.",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "FETCHPROXY_IDENTITY_DIR",
+          "description": "Absolute path where the fetchproxy long-term identity keypair is stored (default ~/.fetchproxy/identity/).",
+          "isRequired": false,
+          "format": "string"
+        }
+      ]
     }
   ]
 }
