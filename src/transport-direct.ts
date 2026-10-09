@@ -2,9 +2,11 @@
  * Default Hemnet transport: a direct Node `fetch` to
  * `https://www.hemnet.se/graphql`.
  *
- * Hemnet serves the read queries anonymously — no bearer, cookie, or
- * CSRF token — so unlike the fetchproxy fleet members this needs no
- * browser session and no optional peer deps. It stays deliberately thin:
+ * Hemnet's read queries need no bearer, cookie, or CSRF token, but since
+ * 2026-07-13 Cloudflare challenges non-browser clients; this transport
+ * then raises {@link CloudflareChallengeError} and the default
+ * FallbackTransport (src/transport-fallback.ts) switches to the browser
+ * bridge. It stays deliberately thin:
  * POST the operation, retry a couple of times on 429 / 5xx / network
  * blips with jittered exponential backoff (honouring a capped
  * `Retry-After`), parse the JSON envelope. Everything Hemnet-semantic

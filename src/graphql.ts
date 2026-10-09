@@ -2,19 +2,23 @@
  * Hemnet GraphQL operations + raw response types.
  *
  * Hemnet.se is a Next.js/Apollo app backed by a public GraphQL endpoint
- * at `POST https://www.hemnet.se/graphql`. Unlike homes.com (which gates
- * every request behind AWS WAF at the session level and forces the
- * fetchproxy-per-call design), Hemnet serves these read queries to
- * anonymous clients with no auth, cookie, or CSRF token — so hemnet-mcp
- * talks to the API directly (see src/transport-direct.ts) instead of
- * riding a browser session.
+ * at `POST https://www.hemnet.se/graphql`. The read queries need no auth,
+ * cookie, or CSRF token, but since 2026-07-13 Hemnet fronts the whole
+ * www.hemnet.se zone with a Cloudflare managed challenge that refuses
+ * non-browser clients. So the default transport (src/transport-fallback.ts)
+ * tries a direct anonymous fetch (src/transport-direct.ts) and, once
+ * walled, rides the user's www.hemnet.se tab through the fetchproxy bridge
+ * (src/transport-fetchproxy.ts).
  *
  * Introspection is DISABLED on the endpoint, so these operations were
  * reverse-engineered field-by-field from the SSR `__APOLLO_STATE__`
  * cache and the API's own "Did you mean" validation hints. Every field
- * selected here is confirmed live. When Hemnet changes a field, the
- * client's `parseLenient`-style guard surfaces a structured warning
- * rather than silently dropping data.
+ * selected here is confirmed live. There is NO schema-drift guard: the
+ * client only fails on a GraphQL `errors` array or a null `data` envelope
+ * (Hemnet's validation errors do catch a removed or renamed field), and
+ * the formatters in src/format.ts map any missing or null field to `null`
+ * without warning. A field Hemnet starts returning as null therefore shows
+ * up as nulls in tool output, not as an error.
  *
  * The four surfaces:
  *   - `autocompleteLocations(query, limit)` — free-text → location ids

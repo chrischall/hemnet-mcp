@@ -13,8 +13,9 @@
  *      derivations, and the tool registrars (to graft `hemnet_*` onto a
  *      combined server). This module re-exports exactly that surface.
  *
- * Because everything reads through a direct GraphQL fetch with no auth,
- * a consumer can construct a client in one line:
+ * The reads need no auth or credentials (only a cleared Cloudflare
+ * session, which the default direct-then-bridge transport handles), so a
+ * consumer can construct a client in one line:
  *
  *   import { createHemnetClient } from 'hemnet-mcp';
  *   const client = createHemnetClient();
