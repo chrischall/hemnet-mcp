@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.11](https://github.com/chrischall/hemnet-mcp/compare/v1.1.10...v1.1.11) (2026-10-09)
+
+
+### Bug Fixes
+
+* annotate tools truthfully and sync manifests with the served tools ([#142](https://github.com/chrischall/hemnet-mcp/issues/142)) ([eda2287](https://github.com/chrischall/hemnet-mcp/commit/eda228766d85e719d67c21ad4441401ba4af63fb))
+* declare the plugin MCP config under the mcpServers key Claude Code reads ([#143](https://github.com/chrischall/hemnet-mcp/issues/143)) ([2c3fa7e](https://github.com/chrischall/hemnet-mcp/commit/2c3fa7e2fc992bd60ff14ec938df28efe597979d))
+* **deps:** Bump @modelcontextprotocol/server ([#136](https://github.com/chrischall/hemnet-mcp/issues/136)) ([f306e6d](https://github.com/chrischall/hemnet-mcp/commit/f306e6deb2cce544e914bc1e59138c6ab6e0f204))
+* **deps:** update @chrischall/mcp-utils to 3.0.0 ([#141](https://github.com/chrischall/hemnet-mcp/issues/141)) ([27aa88a](https://github.com/chrischall/hemnet-mcp/commit/27aa88a1c9c6c7af88cc88ef53b912b91e59d47a))
+* **market:** keep accepting limit and offset on hemnet_get_market_stats ([#140](https://github.com/chrischall/hemnet-mcp/issues/140)) ([9b05f4e](https://github.com/chrischall/hemnet-mcp/commit/9b05f4e18c6bbcec8a8a2175bafb5cb95f28def2)), closes [#139](https://github.com/chrischall/hemnet-mcp/issues/139)
+* resolve low-severity audit findings ([#138](https://github.com/chrischall/hemnet-mcp/issues/138)) ([84ac9bb](https://github.com/chrischall/hemnet-mcp/commit/84ac9bbae24d96b2fb63b6aaa00cda80f5dacb08))
+
 ## [1.1.10](https://github.com/chrischall/hemnet-mcp/compare/v1.1.9...v1.1.10) (2026-10-07)
 
 
