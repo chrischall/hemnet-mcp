@@ -318,6 +318,25 @@ describe('DirectTransport retry backoff (fleet-audit#495)', () => {
     expect(waits).toEqual([1000]);
   });
 
+  it('waits on a real timer by default', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchImpl = vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse(503, {}))
+        .mockResolvedValueOnce(jsonResponse(200, { data: { ok: 1 } }));
+      const t = new DirectTransport({ fetchImpl, random: () => 0 });
+      const pending = t.graphql('q', {});
+      await vi.advanceTimersByTimeAsync(999);
+      expect(fetchImpl).toHaveBeenCalledOnce();
+      await vi.advanceTimersByTimeAsync(1);
+      await expect(pending).resolves.toEqual({ data: { ok: 1 } });
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('does not carry a Retry-After over to a later network-error retry', async () => {
     const { waits, sleep } = recorder();
     const fetchImpl = vi
