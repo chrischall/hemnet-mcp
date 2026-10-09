@@ -32,7 +32,13 @@
       "command": "node",
       "args": [
         "${__dirname}/dist/bundle.js"
-      ]
+      ],
+      "env": {
+        "HEMNET_TRANSPORT": "${user_config.hemnet_transport}",
+        "HEMNET_WS_PORT": "${user_config.hemnet_ws_port}",
+        "FETCHPROXY_WS_HOST": "${user_config.fetchproxy_ws_host}",
+        "FETCHPROXY_IDENTITY_DIR": "${user_config.fetchproxy_identity_dir}"
+      }
     }
   },
   "tools": [
@@ -81,6 +87,32 @@
       "description": "Verify the Hemnet GraphQL endpoint is reachable"
     }
   ],
+  "user_config": {
+    "hemnet_transport": {
+      "type": "string",
+      "title": "Transport mode (advanced)",
+      "description": "Transport mode: `auto` (default) tries a direct anonymous fetch and switches to the ContextMint Bridge browser bridge when Hemnet serves a Cloudflare challenge; `direct` fails hard when walled; `fetchproxy` always uses the bridge.",
+      "required": false
+    },
+    "hemnet_ws_port": {
+      "type": "string",
+      "title": "fetchproxy port (advanced)",
+      "description": "Localhost port of the fetchproxy concentrator the ContextMint Bridge extension connects to (default 37149). Every MCP on one machine shares it, so move it for all of them or not at all.",
+      "required": false
+    },
+    "fetchproxy_ws_host": {
+      "type": "string",
+      "title": "fetchproxy bind address (advanced)",
+      "description": "Bind interface for the fetchproxy concentrator, a literal IP only (default 127.0.0.1). Keep on loopback; it exists for hosted deployments that run each MCP in its own network namespace.",
+      "required": false
+    },
+    "fetchproxy_identity_dir": {
+      "type": "string",
+      "title": "fetchproxy identity directory (advanced)",
+      "description": "Absolute path where the fetchproxy long-term identity keypair is stored (default ~/.fetchproxy/identity/).",
+      "required": false
+    }
+  },
   "compatibility": {
     "platforms": [
       "darwin",
