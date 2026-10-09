@@ -26,14 +26,45 @@ describe('extractListingId', () => {
   });
   it('strips query and fragment and trailing slash', () => {
     expect(
-      extractListingId('https://www.hemnet.se/bostad/foo-123/?utm=1#gallery'),
-    ).toBe('123');
+      extractListingId('https://www.hemnet.se/bostad/foo-21710712/?utm=1#gallery'),
+    ).toBe('21710712');
   });
   it('returns null for empty / non-id input', () => {
     expect(extractListingId('')).toBeNull();
     expect(extractListingId('   ')).toBeNull();
     expect(extractListingId('https://www.hemnet.se/bostader')).toBeNull();
     expect(extractListingId('/')).toBeNull();
+  });
+});
+
+describe('extractListingId — no misparsed ids (fleet-audit#492)', () => {
+  it('rejects a street address instead of reading its house number as an id', () => {
+    expect(extractListingId('Storgatan 12')).toBeNull();
+    expect(extractListingId('Gaddstigen 1, Pershagen')).toBeNull();
+  });
+  it('rejects a slug whose trailing digit run is too short to be a listing id', () => {
+    expect(extractListingId('storgatan-12')).toBeNull();
+    expect(extractListingId('https://www.hemnet.se/bostad/foo-123')).toBeNull();
+  });
+  it('finds the id on a gallery / sub-path URL by scanning segments right to left', () => {
+    expect(
+      extractListingId(
+        'https://www.hemnet.se/bostad/radhus-5rum-pershagen-gaddstigen-1-21710712/bilder',
+      ),
+    ).toBe('21710712');
+    expect(
+      extractListingId('https://www.hemnet.se/bostad/villa-x-21710712/bilder/3?x=1'),
+    ).toBe('21710712');
+  });
+  it('rejects a URL on another host', () => {
+    expect(extractListingId('https://example.com/bostad/villa-x-21710712')).toBeNull();
+  });
+  it('rejects a malformed URL', () => {
+    expect(extractListingId('https://[bad/bostad/villa-x-21710712')).toBeNull();
+  });
+  it('accepts a bare slug and a hemnet.se URL without the www', () => {
+    expect(extractListingId('villa-x-21710712')).toBe('21710712');
+    expect(extractListingId('https://hemnet.se/bostad/villa-x-21710712')).toBe('21710712');
   });
 });
 

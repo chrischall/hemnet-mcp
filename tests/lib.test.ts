@@ -22,7 +22,7 @@ describe('lib entry point', () => {
     expect(typeof computeMarketStats).toBe('function');
     expect(typeof calculateSwedishMortgage).toBe('function');
     expect(typeof formatListingCard).toBe('function');
-    expect(extractListingId('foo-42')).toBe('42');
+    expect(extractListingId('foo-21710712')).toBe('21710712');
     expect(HOUSING_FORM_GROUPS).toContain('APARTMENTS');
     expect(SORT_OPTIONS).toContain('NEWEST');
   });
