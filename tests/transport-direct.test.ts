@@ -31,6 +31,9 @@ function textResponse(
   } as unknown as Response;
 }
 
+/** Skip real backoff waits in tests that exercise retries. */
+const noSleep = async (): Promise<void> => {};
+
 describe('DirectTransport', () => {
   it('POSTs the operation and returns the envelope', async () => {
     const fetchImpl = vi.fn(async () =>
@@ -64,7 +67,7 @@ describe('DirectTransport', () => {
       .fn()
       .mockResolvedValueOnce(jsonResponse(503, {}))
       .mockResolvedValueOnce(jsonResponse(200, { data: { ok: 1 } }));
-    const t = new DirectTransport({ fetchImpl, maxRetries: 2 });
+    const t = new DirectTransport({ fetchImpl, maxRetries: 2, sleep: noSleep });
     const res = await t.graphql('q', {});
     expect(res).toEqual({ data: { ok: 1 } });
     expect(fetchImpl).toHaveBeenCalledTimes(2);
@@ -81,14 +84,14 @@ describe('DirectTransport', () => {
     const fetchImpl = vi.fn(async () => {
       throw new Error('ECONNRESET');
     });
-    const t = new DirectTransport({ fetchImpl, maxRetries: 1 });
+    const t = new DirectTransport({ fetchImpl, maxRetries: 1, sleep: noSleep });
     await expect(t.graphql('q', {})).rejects.toThrow('ECONNRESET');
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
   it('exhausts retryable statuses and throws the status error', async () => {
     const fetchImpl = vi.fn(async () => jsonResponse(429, {}));
-    const t = new DirectTransport({ fetchImpl, maxRetries: 1 });
+    const t = new DirectTransport({ fetchImpl, maxRetries: 1, sleep: noSleep });
     await expect(t.graphql('q', {})).rejects.toThrow('HTTP 429');
   });
 
@@ -242,6 +245,108 @@ describe('DirectTransport', () => {
   it('constructs with all defaults', () => {
     // Exercises the `?? fetch` / `?? '0.0.0'` default branches without a call.
     expect(new DirectTransport()).toBeInstanceOf(DirectTransport);
+  });
+});
+
+describe('DirectTransport retry backoff (fleet-audit#495)', () => {
+  /** Records each requested sleep instead of waiting. */
+  function recorder() {
+    const waits: number[] = [];
+    const sleep = vi.fn(async (ms: number) => {
+      waits.push(ms);
+    });
+    return { waits, sleep };
+  }
+
+  it('honours a 429 Retry-After (delta-seconds) before retrying', async () => {
+    const { waits, sleep } = recorder();
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(textResponse(429, 'slow down', { 'retry-after': '7' }))
+      .mockResolvedValueOnce(jsonResponse(200, { data: { ok: 1 } }));
+    const t = new DirectTransport({ fetchImpl, sleep, random: () => 0 });
+    await expect(t.graphql('q', {})).resolves.toEqual({ data: { ok: 1 } });
+    expect(waits).toEqual([7000]);
+  });
+
+  it('caps an excessive Retry-After at maxRetryAfterMs', async () => {
+    const { waits, sleep } = recorder();
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(textResponse(429, '', { 'retry-after': '3600' }))
+      .mockResolvedValueOnce(jsonResponse(200, { data: {} }));
+    const t = new DirectTransport({
+      fetchImpl,
+      sleep,
+      random: () => 0,
+      maxRetryAfterMs: 5000,
+    });
+    await t.graphql('q', {});
+    expect(waits).toEqual([5000]);
+  });
+
+  it('backs off exponentially with jitter (>=1s, >=2s) when no Retry-After is sent', async () => {
+    const { waits, sleep } = recorder();
+    const fetchImpl = vi.fn(async () => jsonResponse(503, {}));
+    const t = new DirectTransport({ fetchImpl, sleep, random: () => 0, maxRetries: 2 });
+    await expect(t.graphql('q', {})).rejects.toThrow('HTTP 503');
+    expect(waits).toEqual([1000, 2000]);
+
+    const hi = recorder();
+    const t2 = new DirectTransport({
+      fetchImpl,
+      sleep: hi.sleep,
+      random: () => 0.999,
+      maxRetries: 2,
+    });
+    await expect(t2.graphql('q', {})).rejects.toThrow('HTTP 503');
+    // Jitter spreads each wait over [window, 1.5 * window).
+    expect(hi.waits[0]).toBeGreaterThan(1400);
+    expect(hi.waits[0]).toBeLessThan(1500);
+    expect(hi.waits[1]).toBeGreaterThan(2900);
+    expect(hi.waits[1]).toBeLessThan(3000);
+  });
+
+  it('never waits less than the jittered backoff when Retry-After is shorter', async () => {
+    const { waits, sleep } = recorder();
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(textResponse(429, '', { 'retry-after': '0' }))
+      .mockResolvedValueOnce(jsonResponse(200, { data: {} }));
+    const t = new DirectTransport({ fetchImpl, sleep, random: () => 0 });
+    await t.graphql('q', {});
+    expect(waits).toEqual([1000]);
+  });
+
+  it('waits on a real timer by default', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchImpl = vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse(503, {}))
+        .mockResolvedValueOnce(jsonResponse(200, { data: { ok: 1 } }));
+      const t = new DirectTransport({ fetchImpl, random: () => 0 });
+      const pending = t.graphql('q', {});
+      await vi.advanceTimersByTimeAsync(999);
+      expect(fetchImpl).toHaveBeenCalledOnce();
+      await vi.advanceTimersByTimeAsync(1);
+      await expect(pending).resolves.toEqual({ data: { ok: 1 } });
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not carry a Retry-After over to a later network-error retry', async () => {
+    const { waits, sleep } = recorder();
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(textResponse(429, '', { 'retry-after': '9' }))
+      .mockRejectedValueOnce(new Error('ECONNRESET'))
+      .mockResolvedValueOnce(jsonResponse(200, { data: {} }));
+    const t = new DirectTransport({ fetchImpl, sleep, random: () => 0 });
+    await t.graphql('q', {});
+    expect(waits).toEqual([9000, 2000]);
   });
 });
 

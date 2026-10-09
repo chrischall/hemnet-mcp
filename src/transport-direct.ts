@@ -2,11 +2,14 @@
  * Default Hemnet transport: a direct Node `fetch` to
  * `https://www.hemnet.se/graphql`.
  *
- * Hemnet serves the read queries anonymously — no bearer, cookie, or
- * CSRF token — so unlike the fetchproxy fleet members this needs no
- * browser session and no optional peer deps. It stays deliberately thin:
+ * Hemnet's read queries need no bearer, cookie, or CSRF token, but since
+ * 2026-07-13 Cloudflare challenges non-browser clients; this transport
+ * then raises {@link CloudflareChallengeError} and the default
+ * FallbackTransport (src/transport-fallback.ts) switches to the browser
+ * bridge. It stays deliberately thin:
  * POST the operation, retry a couple of times on 429 / 5xx / network
- * blips with backoff, parse the JSON envelope. Everything Hemnet-semantic
+ * blips with jittered exponential backoff (honouring a capped
+ * `Retry-After`), parse the JSON envelope. Everything Hemnet-semantic
  * (GraphQL-error classification, empty-node handling) lives on the client.
  *
  * There are no secrets in play here, so — unlike the bearer clients in
@@ -14,7 +17,11 @@
  * User-Agent identifies the client honestly rather than impersonating a
  * browser.
  */
-import { EdgeBlockedError, detectEdgeBlock } from '@chrischall/mcp-utils';
+import {
+  EdgeBlockedError,
+  detectEdgeBlock,
+  parseRetryAfterMs,
+} from '@chrischall/mcp-utils';
 import type {
   GraphQLResponse,
   HemnetTransport,
@@ -34,9 +41,22 @@ export interface DirectTransportOptions {
   version?: string;
   /** Injected fetch (tests). Defaults to global `fetch`. */
   fetchImpl?: typeof fetch;
+  /**
+   * Cap on an honoured `Retry-After` wait, in ms. Default 10000 — long
+   * enough to respect a soft rate limit, short enough not to pin a tool
+   * call open.
+   */
+  maxRetryAfterMs?: number;
+  /** Injected sleep (tests). Defaults to a `setTimeout` promise. */
+  sleep?: (ms: number) => Promise<void>;
+  /** Injected random source in [0,1) for jitter (tests). Defaults to `Math.random`. */
+  random?: () => number;
 }
 
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+
+/** Backoff window before the first retry; doubles per retry (1s, 2s, …). */
+const BASE_BACKOFF_MS = 1000;
 
 /** Sleep helper — extracted so it's obvious in a backoff loop. */
 function delay(ms: number): Promise<void> {
@@ -131,6 +151,9 @@ export class DirectTransport implements HemnetTransport {
   private readonly maxRetries: number;
   private readonly userAgent: string;
   private readonly fetchImpl: typeof fetch;
+  private readonly maxRetryAfterMs: number;
+  private readonly sleep: (ms: number) => Promise<void>;
+  private readonly random: () => number;
 
   constructor(opts: DirectTransportOptions = {}) {
     this.endpoint = opts.endpoint ?? GRAPHQL_ENDPOINT;
@@ -138,6 +161,22 @@ export class DirectTransport implements HemnetTransport {
     this.maxRetries = opts.maxRetries ?? 2;
     this.userAgent = `hemnet-mcp/${opts.version ?? '0.0.0'} (+https://github.com/chrischall/hemnet-mcp)`;
     this.fetchImpl = opts.fetchImpl ?? fetch;
+    this.maxRetryAfterMs = opts.maxRetryAfterMs ?? 10_000;
+    this.sleep = opts.sleep ?? delay;
+    this.random = opts.random ?? Math.random;
+  }
+
+  /**
+   * Wait before retry number `retry` (1-based): an exponential window
+   * (1s, 2s, …) spread over [window, 1.5 × window) by jitter so concurrent
+   * callers (hemnet_compare_listings fans out) don't retry in lockstep, and
+   * never shorter than the server's `Retry-After` (capped at
+   * `maxRetryAfterMs`) — fleet-audit#495.
+   */
+  private backoffMs(retry: number, retryAfterMs: number): number {
+    const window = BASE_BACKOFF_MS * 2 ** (retry - 1);
+    const jittered = Math.floor(window + this.random() * (window / 2));
+    return Math.max(jittered, retryAfterMs);
   }
 
   status(): TransportStatus {
@@ -150,9 +189,13 @@ export class DirectTransport implements HemnetTransport {
   ): Promise<GraphQLResponse<T>> {
     const body = JSON.stringify({ query, variables });
     let lastError: unknown;
+    // The previous response's honoured `Retry-After` (0 when absent / not
+    // an HTTP response), consumed by the next attempt's backoff.
+    let retryAfterMs = 0;
 
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
-      if (attempt > 0) await delay(2 ** attempt * 250);
+      if (attempt > 0) await this.sleep(this.backoffMs(attempt, retryAfterMs));
+      retryAfterMs = 0;
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -196,6 +239,10 @@ export class DirectTransport implements HemnetTransport {
         if (!RETRYABLE_STATUS.has(res.status)) {
           throw hardHttpError(res, errBody.slice(0, 200));
         }
+        retryAfterMs = parseRetryAfterMs(res.headers.get('retry-after'), {
+          defaultMs: 0,
+          capMs: this.maxRetryAfterMs,
+        });
         lastError = new Error(`Hemnet GraphQL HTTP ${res.status}`);
       } catch (err) {
         // A hard HTTP error is terminal — propagate at once. Network

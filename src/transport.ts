@@ -6,8 +6,10 @@
  * tests/helpers.ts) with zero network, and so an alternative transport
  * (e.g. a fetchproxy bridge for the auth-gated "Mitt Hemnet" surfaces, or
  * a realty-meta-supplied fetcher) can be swapped in without touching a
- * single tool. The default implementation is the zero-dependency direct
- * `fetch` in src/transport-direct.ts.
+ * single tool. The default is the direct-then-bridge FallbackTransport in
+ * src/transport-fallback.ts, over the direct `fetch` in
+ * src/transport-direct.ts and the fetchproxy bridge in
+ * src/transport-fetchproxy.ts.
  *
  * The transport owns ONLY the wire round-trip + JSON parse. It does NOT
  * interpret GraphQL `errors`, map them to typed exceptions, or reach into

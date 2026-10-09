@@ -83,7 +83,7 @@ node dist/index.js
 | `hemnet_get_listing_photos` | Just the gallery photo URLs. |
 | `hemnet_search_sold` | Search **sold** listings with final price, asking price, and over/under-asking %. |
 | `hemnet_get_sold_listing` | Full detail for one sold listing. |
-| `hemnet_get_market_stats` | Median/average final price and price-per-m² for a location. |
+| `hemnet_get_market_stats` | Median/average final price and price-per-m² for a location, over the most recent `max_sales` sales (default 200). |
 | `hemnet_compare_listings` | Fetch several listings at once for side-by-side comparison. |
 | `hemnet_get_by_address` | Resolve a free-text street address to a live listing. |
 | `hemnet_calculate_mortgage` | Local Swedish monthly-cost calculator (interest + amortisation + fee, gross & after-tax). No network. |

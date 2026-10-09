@@ -48,7 +48,9 @@ Then pass a `location_id` into the search tools — or pass a free-text
   valuation.
 - `hemnet_get_sold_listing` — full detail for one sold listing.
 - `hemnet_get_market_stats` — median/average final price and price-per-m²
-  for a location (accepts the same filters as the sold search). Check
+  for a location (accepts the same filters as the sold search). It
+  aggregates the most recent `max_sales` sales (default 200, max 500), so
+  compare `sampled_sales` with `total_matching_sales`, and check
   `sample_size` before trusting thin medians.
 
 ## Local calculation
