@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.12](https://github.com/chrischall/hemnet-mcp/compare/v1.1.11...v1.1.12) (2026-10-10)
+
+
+### Documentation
+
+* make AGENTS.md a symlink to CLAUDE.md ([#144](https://github.com/chrischall/hemnet-mcp/issues/144)) ([1c70117](https://github.com/chrischall/hemnet-mcp/commit/1c701178371552cd037db1dd6ca6ed942d8553f1))
+
 ## [1.1.11](https://github.com/chrischall/hemnet-mcp/compare/v1.1.10...v1.1.11) (2026-10-09)
 
 
