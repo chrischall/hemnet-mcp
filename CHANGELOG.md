@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.12](https://github.com/chrischall/hemnet-mcp/compare/v1.1.11...v1.1.12) (2026-10-16)
+
+
+### Bug Fixes
+
+* **deps:** bump realty-core to 0.6.4 so addresses with a postal code resolve ([#150](https://github.com/chrischall/hemnet-mcp/issues/150)) ([1bb9eda](https://github.com/chrischall/hemnet-mcp/commit/1bb9edad508ccc411b8fe6eb06cf52bad82c421f))
+* **deps:** Bump the production-dependencies group with 4 updates ([#149](https://github.com/chrischall/hemnet-mcp/issues/149)) ([32c4e87](https://github.com/chrischall/hemnet-mcp/commit/32c4e87679232dfa4590f5631b0f2d133e38c383))
+
+
+### Documentation
+
+* make AGENTS.md a symlink to CLAUDE.md ([#144](https://github.com/chrischall/hemnet-mcp/issues/144)) ([1c70117](https://github.com/chrischall/hemnet-mcp/commit/1c701178371552cd037db1dd6ca6ed942d8553f1))
+
 ## [1.1.11](https://github.com/chrischall/hemnet-mcp/compare/v1.1.10...v1.1.11) (2026-10-09)
 
 
