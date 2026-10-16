@@ -99,6 +99,36 @@ describe('hemnet_get_by_address', () => {
     await h.close();
   });
 
+  it('resolves an address carrying a postal code and city (fleet-audit#1260)', async () => {
+    // realty-core <=0.6.3 scored the whole query: "Storgatan 12, 111 22
+    // Stockholm" kept storgatan/12/111/stockholm, hit 2 of 4 against the
+    // street-only listing line → 0.5 → miss on every page. 0.6.4 scores the
+    // street segment when the candidate is the street line only.
+    const at = (id: string, streetAddress: string) => ({ ...HOUSE_CARD, id, streetAddress });
+    const client = routedClient({
+      AutocompleteLocations: { data: { autocompleteLocations: { hits: [LOCATION_HIT] } } },
+      SearchForSale: {
+        data: {
+          searchForSaleListings: {
+            total: 2,
+            listings: [at('storgatan-14', 'Storgatan 14'), at('storgatan-12', 'Storgatan 12')],
+          },
+        },
+      },
+    });
+    const h = await createTestHarness((s) => registerByAddressTools(s, client));
+    const resolve = async (address: string) =>
+      parseToolResult<{ resolved: boolean; listing?: { id: string } }>(
+        await h.callTool('hemnet_get_by_address', { address, location: 'Stockholm' }),
+      );
+    const hit = await resolve('Storgatan 12, 111 22 Stockholm');
+    expect(hit.resolved).toBe(true);
+    expect(hit.listing?.id).toBe('storgatan-12');
+    // The postal code never lets the neighbour through.
+    expect((await resolve('Storgatan 16, 111 22 Stockholm')).resolved).toBe(false);
+    await h.close();
+  });
+
   it('returns resolved:false when the location does not resolve', async () => {
     const client = routedClient({
       AutocompleteLocations: { data: { autocompleteLocations: { hits: [] } } },
