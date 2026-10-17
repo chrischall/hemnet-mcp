@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.13](https://github.com/chrischall/hemnet-mcp/compare/v1.1.12...v1.1.13) (2026-10-17)
+
+
+### Refactor
+
+* **transport:** build the direct GraphQL transport on mcp-utils createGraphqlClient ([#152](https://github.com/chrischall/hemnet-mcp/issues/152)) ([a9d7305](https://github.com/chrischall/hemnet-mcp/commit/a9d7305b3d7a0d8921c8ca79411a59cec0f6200c))
+
 ## [1.1.12](https://github.com/chrischall/hemnet-mcp/compare/v1.1.11...v1.1.12) (2026-10-16)
 
 
