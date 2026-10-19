@@ -4,6 +4,19 @@ slug: hemnet
 summary: >-
   Hemnet.se real estate tools for Claude — search, sold prices, listings,
   and market stats
+examples:
+  - prompt: >-
+      Find apartments for sale in Södermalm, Stockholm with at least 2 rooms
+      under 5 million SEK.
+    note: Searches active Hemnet listings with price and room filters.
+  - prompt: >-
+      What have 3-room apartments in Vasastan sold for recently, and how far
+      over asking did they go?
+    note: Uses sold prices (slutpriser) with final vs asking price.
+  - prompt: >-
+      What would the monthly cost be on a 4.2 million SEK apartment with a
+      15% down payment, 3.5% interest and a 4,000 SEK BRF fee?
+    note: Local Swedish mortgage calculator, incl. amortisation and ränteavdrag.
 #
 # Hosting note (a comment, not user-facing summary text): this is a
 # BROWSER-BRIDGE MCP — it reaches its site through the user's signed-in
