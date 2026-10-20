@@ -22,7 +22,9 @@
 import {
   bridgeErrorInfo,
   createFetchproxyTransport,
+  createLazyTransport,
   type BridgeHealthcheckTransport,
+  type LazyTransport,
   type FetchproxyFetchInit,
   type FetchproxyServer,
   type FetchproxyServerOpts,
@@ -86,42 +88,34 @@ export interface FetchproxyTransportOptions {
 }
 
 export class HemnetFetchproxyTransport implements HemnetTransport {
-  private readonly bridge: HemnetBridge;
-  private startPromise: Promise<void> | undefined;
+  /**
+   * The bridge, built lazily and started once
+   * (`@chrischall/mcp-utils/fetchproxy` `createLazyTransport`,
+   * fleet-audit#1342): concurrent callers share one start, and a rejected
+   * start is forgotten so a transient failure is retried on the next request
+   * instead of sticking forever.
+   */
+  private readonly lazy: LazyTransport<HemnetBridge>;
 
   constructor(opts: FetchproxyTransportOptions = {}) {
-    this.bridge =
-      opts.bridge ??
-      createFetchproxyTransport({
-        port: opts.port ?? readPortEnv('HEMNET_WS_PORT', DEFAULT_WS_PORT),
-        serverName: 'hemnet-mcp',
-        version: opts.version ?? '0.0.0',
-        // 'hemnet.se' matches www.hemnet.se (exact host or any subdomain).
-        domains: ['hemnet.se'],
-        defaultSubdomain: 'www',
-        capabilities: ['fetch'],
-        // Canonical fleet startup banner on start() — stderr only.
-        logListening: true,
-        debugEnvVar: 'HEMNET_DEBUG_LOG',
-        fetchTimeoutMs: opts.timeoutMs ?? 20_000,
-        ...(opts.createServer ? { createServer: opts.createServer } : {}),
-      });
-  }
-
-  /**
-   * The bridge, started. `start()` runs single-flight (concurrent callers
-   * share one start) and clears on rejection so a transient failure is
-   * retried on the next request instead of sticking forever.
-   */
-  private async ready(): Promise<HemnetBridge> {
-    if (!this.startPromise) {
-      this.startPromise = this.bridge.start().catch((err: unknown) => {
-        this.startPromise = undefined;
-        throw err;
-      });
-    }
-    await this.startPromise;
-    return this.bridge;
+    this.lazy = createLazyTransport<HemnetBridge>(
+      () =>
+        opts.bridge ??
+        createFetchproxyTransport({
+          port: opts.port ?? readPortEnv('HEMNET_WS_PORT', DEFAULT_WS_PORT),
+          serverName: 'hemnet-mcp',
+          version: opts.version ?? '0.0.0',
+          // 'hemnet.se' matches www.hemnet.se (exact host or any subdomain).
+          domains: ['hemnet.se'],
+          defaultSubdomain: 'www',
+          capabilities: ['fetch'],
+          // Canonical fleet startup banner on start() — stderr only.
+          logListening: true,
+          debugEnvVar: 'HEMNET_DEBUG_LOG',
+          fetchTimeoutMs: opts.timeoutMs ?? 20_000,
+          ...(opts.createServer ? { createServer: opts.createServer } : {}),
+        }),
+    );
   }
 
   status(): TransportStatus {
@@ -130,7 +124,7 @@ export class HemnetFetchproxyTransport implements HemnetTransport {
 
   /** The bridge itself, for the shared healthcheck's status projection. */
   bridgeTransport(): BridgeHealthcheckTransport {
-    return this.bridge;
+    return this.lazy.transport();
   }
 
   async graphql<T>(
@@ -139,7 +133,7 @@ export class HemnetFetchproxyTransport implements HemnetTransport {
   ): Promise<GraphQLResponse<T>> {
     let result: { status: number; body: string };
     try {
-      const bridge = await this.ready();
+      const bridge = await this.lazy.ready();
       result = await bridge.fetch({
         method: 'POST',
         path: '/graphql',
