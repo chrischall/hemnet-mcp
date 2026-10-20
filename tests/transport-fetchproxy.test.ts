@@ -119,23 +119,27 @@ describe('HemnetFetchproxyTransport', () => {
     expect((err as Error).cause).toBe(original);
   });
 
-  it('constructs the real fetchproxy transport by default', () => {
-    // No verb call — construction is cheap and binds nothing.
-    expect(new HemnetFetchproxyTransport({ version: '9.9.9' })).toBeInstanceOf(
-      HemnetFetchproxyTransport,
-    );
+  it('builds the real fetchproxy transport with its defaults on first use', () => {
+    // The bridge is built lazily, so ask for it; building binds nothing
+    // (the port is only listened on at start()).
+    const t = new HemnetFetchproxyTransport();
+    const bridge = t.bridgeTransport();
+    expect(bridge).toBeDefined();
+    // Built once: a second ask returns the same bridge.
+    expect(t.bridgeTransport()).toBe(bridge);
   });
 
-  it('forwards the createServer test seam to the real transport factory', () => {
-    // Exercises the `createServer` spread arm without a live extension:
-    // the seam is only invoked on the first verb call, so construction is
-    // enough to cover the branch.
+  it('forwards port, version, timeout and the createServer seam to the real transport factory', () => {
+    // The createServer seam is only invoked on start(), so building the
+    // bridge covers every option arm without a live extension.
     const createServer = vi.fn();
     const t = new HemnetFetchproxyTransport({
+      port: 40123,
       version: '9.9.9',
+      timeoutMs: 5_000,
       createServer: createServer as never,
     });
-    expect(t).toBeInstanceOf(HemnetFetchproxyTransport);
+    expect(t.bridgeTransport()).toBeDefined();
   });
 });
 
