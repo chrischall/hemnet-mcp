@@ -152,4 +152,15 @@ describe('HemnetFetchproxyTransport.status / bridgeTransport', () => {
     expect(t.bridgeTransport()).toBe(bridge);
     expect(t.bridgeTransport().status()).toBe(health);
   });
+
+  it('hands the healthcheck the same bridge graphql() starts, without starting it', async () => {
+    const bridge = fakeBridge();
+    const t = new HemnetFetchproxyTransport({ bridge });
+    expect(t.bridgeTransport()).toBe(bridge);
+    expect(bridge.start).not.toHaveBeenCalled();
+    await t.graphql('q', {});
+    expect(bridge.start).toHaveBeenCalledOnce();
+    expect(bridge.fetch).toHaveBeenCalledOnce();
+    expect(t.bridgeTransport()).toBe(bridge);
+  });
 });
