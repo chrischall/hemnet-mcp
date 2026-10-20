@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.14](https://github.com/chrischall/hemnet-mcp/compare/v1.1.13...v1.1.14) (2026-10-20)
+
+
+### Refactor
+
+* **fetchproxy:** start the browser bridge via the shared createLazyTransport ([#157](https://github.com/chrischall/hemnet-mcp/issues/157)) ([0ba9ccc](https://github.com/chrischall/hemnet-mcp/commit/0ba9ccccbfe7fc0bbfbc8fd7234751fee72f8d8c))
+
+
+### Documentation
+
+* **mint:** add sample prompts for the public catalog ([#155](https://github.com/chrischall/hemnet-mcp/issues/155)) ([533df8d](https://github.com/chrischall/hemnet-mcp/commit/533df8df2f101ca33751879cb29cdc3cabfb9659))
+
 ## [1.1.13](https://github.com/chrischall/hemnet-mcp/compare/v1.1.12...v1.1.13) (2026-10-17)
 
 
