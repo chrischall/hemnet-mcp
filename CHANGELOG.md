@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.15](https://github.com/chrischall/hemnet-mcp/compare/v1.1.14...v1.1.15) (2026-10-29)
+
+
+### Bug Fixes
+
+* **deps:** Bump zod ([#159](https://github.com/chrischall/hemnet-mcp/issues/159)) ([8b1157c](https://github.com/chrischall/hemnet-mcp/commit/8b1157c60d1f83c2f22e994aa7cefb2f57908057))
+* **deps:** require @chrischall/mcp-utils 3.4.0 ([#160](https://github.com/chrischall/hemnet-mcp/issues/160)) ([644b227](https://github.com/chrischall/hemnet-mcp/commit/644b22715cc9bc58b25ad7b1066b2334fd76745e))
+* **deps:** require the MCP SDK ^2.4.0 that mcp-utils 3.4.0 peer-requires ([#162](https://github.com/chrischall/hemnet-mcp/issues/162)) ([b07d1a8](https://github.com/chrischall/hemnet-mcp/commit/b07d1a8045db28f95ba8df58e79325ad7f9b4823))
+
 ## [1.1.14](https://github.com/chrischall/hemnet-mcp/compare/v1.1.13...v1.1.14) (2026-10-20)
 
 
