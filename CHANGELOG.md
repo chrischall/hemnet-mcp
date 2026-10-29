@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.16](https://github.com/chrischall/hemnet-mcp/compare/v1.1.15...v1.1.16) (2026-10-29)
+
+
+### Bug Fixes
+
+* **deps:** Bump @fetchproxy/server ([#163](https://github.com/chrischall/hemnet-mcp/issues/163)) ([9684552](https://github.com/chrischall/hemnet-mcp/commit/968455252a560fc2e766adb343c078d55c4d368c))
+
 ## [1.1.15](https://github.com/chrischall/hemnet-mcp/compare/v1.1.14...v1.1.15) (2026-10-29)
 
 
