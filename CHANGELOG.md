@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0](https://github.com/chrischall/hemnet-mcp/compare/v1.1.15...v1.2.0) (2026-11-04)
+
+
+### Features
+
+* context-group hints ([#165](https://github.com/chrischall/hemnet-mcp/issues/165)) ([760d612](https://github.com/chrischall/hemnet-mcp/commit/760d612567485f1ab0713d01267d490af50adf48))
+
+
+### Bug Fixes
+
+* **deps:** Bump @fetchproxy/server ([#163](https://github.com/chrischall/hemnet-mcp/issues/163)) ([9684552](https://github.com/chrischall/hemnet-mcp/commit/968455252a560fc2e766adb343c078d55c4d368c))
+
 ## [1.1.15](https://github.com/chrischall/hemnet-mcp/compare/v1.1.14...v1.1.15) (2026-10-29)
 
 
