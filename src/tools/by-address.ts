@@ -5,6 +5,7 @@ import { messageOf, minifiedResult } from '@chrischall/mcp-utils';
 import type { HemnetClient } from '../client.js';
 import { formatListingCard, type ListingSummary } from '../format.js';
 import type { HemnetSearchInput } from '../graphql.js';
+import { homeMeta } from './hints.js';
 
 /**
  * `hemnet_get_by_address` — resolve a free-text Swedish street address to
@@ -46,6 +47,7 @@ export function registerByAddressTools(
       title: 'Resolve a street address to a Hemnet listing',
       description:
         `Resolve a free-text Swedish street address to a live Hemnet for-sale listing. Give the \`address\` (street + number) and a \`location\` (city/area/municipality). Returns the matched listing with a \`matched: true\`, the match \`score\`, and \`matched_via\`, or \`{ resolved: false }\` when nothing matches. Scans up to ${PAGE_SIZE * MAX_PAGES} listings in the location; a miss with \`truncated: true\` is not definitive — pass price_min/price_max or a smaller location to narrow it. Read-only.`,
+      _meta: homeMeta('lookup'),
       annotations: {
         title: 'Resolve a street address to a Hemnet listing',
         readOnlyHint: true,

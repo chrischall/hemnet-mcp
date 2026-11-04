@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { McpToolError, minifiedResult } from '@chrischall/mcp-utils';
 import type { HemnetClient } from '../client.js';
 import { extractListingId } from '../url.js';
+import { homeMeta } from './hints.js';
 
 /**
  * `hemnet_get_listing_photos` — just the gallery image URLs for a listing.
@@ -22,6 +23,7 @@ export function registerPhotosTools(
       title: 'Get photo URLs for a Hemnet listing',
       description:
         'Return the gallery photo URLs for an active for-sale Hemnet listing by id or /bostad/ URL. Read-only.',
+      _meta: homeMeta('lookup'),
       annotations: {
         title: 'Get photo URLs for a Hemnet listing',
         readOnlyHint: true,

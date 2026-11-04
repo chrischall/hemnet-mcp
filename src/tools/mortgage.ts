@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
 import { minifiedResult } from '@chrischall/mcp-utils';
 import { calculateSwedishMortgage } from '../mortgage.js';
+import { homeMeta, MORTGAGE_ALIASES } from './hints.js';
 
 /**
  * `hemnet_calculate_mortgage` — local-only Swedish mortgage cost.
@@ -19,6 +20,7 @@ export function registerMortgageTools(server: McpServer): void {
       title: 'Calculate a Swedish monthly mortgage cost',
       description:
         'Local-only Swedish mortgage calculator (all amounts SEK). Returns the monthly cost broken into interest, mandated amortisation (amorteringskrav from LTV, rules as of 1 April 2026), BRF fee (avgift), and operating cost — with both gross and after-tax (ränteavdrag) totals. Provide `down_payment` OR `down_payment_percent` (defaults to the legal 10% minimum). No network call.',
+      _meta: homeMeta('other', MORTGAGE_ALIASES),
       annotations: {
         title: 'Calculate a Swedish monthly mortgage cost',
         readOnlyHint: true,

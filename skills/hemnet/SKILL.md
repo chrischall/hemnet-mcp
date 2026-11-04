@@ -62,6 +62,19 @@ Then pass a `location_id` into the search tools — or pass a free-text
   after-tax (ränteavdrag) totals. Down payment defaults to the legal 10%
   minimum. No network.
 
+## In context groups
+
+Hemnet is a member of the **home** group. It has no canonical read and no
+subjects: there is no account, so nothing lists the person's homes or
+saved searches, and every search needs a place the person names. A
+compound ask ("what's on at home, and anything new on Hemnet?") gets no
+Hemnet line from the group's intent tools; ask a direct question with a
+place instead ("new apartments for sale in Vasastan?", "what did villas
+sell for in Täby?"), which the group routes to these lookups by their
+aliases (for sale, bostad, slutpris, mortgage, …). When Hemnet's
+Cloudflare wall forces the browser-bridge leg and no hemnet.se tab is
+open, the group answers "needs your browser open" for Hemnet.
+
 ## Diagnostics
 
 - `hemnet_healthcheck` — one-call check that the GraphQL endpoint is

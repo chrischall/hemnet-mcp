@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import type { HemnetClient } from '../client.js';
 import { minifiedResult } from '@chrischall/mcp-utils';
 import { formatLocationHit } from '../format.js';
+import { homeMeta } from './hints.js';
 
 /**
  * `hemnet_autocomplete_location` — resolve a free-text place name into
@@ -26,6 +27,7 @@ export function registerAutocompleteTools(
       title: 'Resolve a place name to Hemnet location ids',
       description:
         'Look up Hemnet location ids for a free-text place name (municipality, district, or area). Returns ranked hits with `location_id`, `full_name`, and `parent_full_name`. Feed a `location_id` into hemnet_search_listings / hemnet_search_sold. Read-only.',
+      _meta: homeMeta('lookup'),
       annotations: {
         title: 'Resolve a place name to Hemnet location ids',
         readOnlyHint: true,
