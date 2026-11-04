@@ -4,6 +4,7 @@ import type { HemnetClient } from '../client.js';
 import { minifiedResult } from '@chrischall/mcp-utils';
 import { formatListingCard } from '../format.js';
 import { buildSearchInput, searchInputShape, type SearchArgs } from './_shared.js';
+import { homeMeta, FOR_SALE_ALIASES } from './hints.js';
 
 /**
  * `hemnet_search_listings` — search active for-sale listings.
@@ -23,6 +24,7 @@ export function registerSearchTools(
       title: 'Search Hemnet for-sale listings',
       description:
         'Search active for-sale property listings on hemnet.se by location and optional filters (price band in SEK, rooms, living area in m², property-type groups, keywords). Returns listing summaries with price, fee, m², rooms, price-per-m², and coordinates. Provide `location_ids` (from hemnet_autocomplete_location) or a free-text `location`. Read-only.',
+      _meta: homeMeta('lookup', FOR_SALE_ALIASES),
       annotations: {
         title: 'Search Hemnet for-sale listings',
         readOnlyHint: true,

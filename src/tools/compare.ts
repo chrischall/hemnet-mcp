@@ -4,6 +4,7 @@ import { mapWithConcurrency, messageOf, minifiedResult } from '@chrischall/mcp-u
 import type { HemnetClient } from '../client.js';
 import { formatListingDetail } from '../format.js';
 import { extractListingId } from '../url.js';
+import { homeMeta } from './hints.js';
 
 /**
  * `hemnet_compare_listings` — fetch several for-sale listings at once for
@@ -28,6 +29,7 @@ export function registerCompareTools(
       title: 'Compare several Hemnet listings',
       description:
         'Fetch and normalise multiple active for-sale Hemnet listings at once (by id or /bostad/ URL) for side-by-side comparison. Up to 20 targets; input order preserved; per-row errors captured. Read-only.',
+      _meta: homeMeta('lookup'),
       annotations: {
         title: 'Compare several Hemnet listings',
         readOnlyHint: true,

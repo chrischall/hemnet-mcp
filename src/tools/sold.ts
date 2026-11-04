@@ -5,6 +5,7 @@ import type { HemnetClient } from '../client.js';
 import { formatSaleCard, formatSoldDetail } from '../format.js';
 import { extractListingId } from '../url.js';
 import { buildSearchInput, searchInputShape, type SearchArgs } from './_shared.js';
+import { homeMeta, SOLD_ALIASES } from './hints.js';
 
 /**
  * `hemnet_search_sold` + `hemnet_get_sold_listing` — Hemnet's sold-price
@@ -26,6 +27,7 @@ export function registerSoldTools(
       title: 'Search Hemnet sold listings (slutpriser)',
       description:
         'Search SOLD property listings ("slutpriser") on hemnet.se by location and optional filters. Each result carries the achieved final price, the asking price, and the over/under-asking percentage — the core comps signal for valuation. Provide `location_ids` (from hemnet_autocomplete_location) or a free-text `location`. Read-only.',
+      _meta: homeMeta('lookup', SOLD_ALIASES),
       annotations: {
         title: 'Search Hemnet sold listings (slutpriser)',
         readOnlyHint: true,
@@ -56,6 +58,7 @@ export function registerSoldTools(
       title: 'Get a Hemnet sold listing by id or URL',
       description:
         'Fetch the full detail of a single SOLD listing by its Hemnet id or a /salda/ URL. Returns final price, asking price, price change, m², rooms, tenure, broker, and coordinates. Read-only.',
+      _meta: homeMeta('lookup'),
       annotations: {
         title: 'Get a Hemnet sold listing by id or URL',
         readOnlyHint: true,

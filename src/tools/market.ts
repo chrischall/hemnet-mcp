@@ -6,6 +6,7 @@ import type { RawSaleCard } from '../graphql.js';
 import { formatSaleCard } from '../format.js';
 import { computeMarketStats } from '../stats.js';
 import { buildSearchInput, searchInputShape, type SearchArgs } from './_shared.js';
+import { homeMeta, SOLD_ALIASES } from './hints.js';
 
 /** Hemnet's `searchSales` page cap. */
 const PAGE_SIZE = 50;
@@ -72,6 +73,7 @@ export function registerMarketTools(
       title: 'Hemnet sold-price market statistics',
       description:
         `Aggregate median/average statistics from recent SOLD listings for a location (and optional property-type/size filters): median & average final price, median & average price-per-m², and average over/under-asking percentage. The stats cover the most recent \`max_sales\` sales (default ${DEFAULT_MAX_SALES}, max ${MAX_MAX_SALES}), not necessarily every match — compare \`sampled_sales\` with \`total_matching_sales\`. Provide \`location_ids\` or a free-text \`location\`. Read-only.`,
+      _meta: homeMeta('lookup', SOLD_ALIASES),
       annotations: {
         title: 'Hemnet sold-price market statistics',
         readOnlyHint: true,

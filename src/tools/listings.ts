@@ -4,6 +4,7 @@ import { McpToolError, minifiedResult } from '@chrischall/mcp-utils';
 import type { HemnetClient } from '../client.js';
 import { formatListingDetail } from '../format.js';
 import { extractListingId } from '../url.js';
+import { homeMeta } from './hints.js';
 
 /**
  * `hemnet_get_listing` — full detail for one active for-sale listing.
@@ -24,6 +25,7 @@ export function registerListingTools(
       title: 'Get a Hemnet for-sale listing by id or URL',
       description:
         'Fetch the full detail of a single active for-sale listing by its Hemnet id or a /bostad/ URL. Returns price, monthly fee, yearly running costs, living/land area in m², rooms, tenure, construction year, energy class, broker, description, status labels, coordinates, and gallery photo URLs. For a SOLD listing use hemnet_get_sold_listing instead. Read-only.',
+      _meta: homeMeta('lookup'),
       annotations: {
         title: 'Get a Hemnet for-sale listing by id or URL',
         readOnlyHint: true,
