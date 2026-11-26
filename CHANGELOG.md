@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1](https://github.com/chrischall/hemnet-mcp/compare/v1.2.0...v1.2.1) (2026-11-26)
+
+
+### Bug Fixes
+
+* **deps:** Bump @chrischall/mcp-utils ([#170](https://github.com/chrischall/hemnet-mcp/issues/170)) ([4bc9560](https://github.com/chrischall/hemnet-mcp/commit/4bc95602345253e807cd62d1f00ceee262db8dbd))
+* **deps:** Bump the production-dependencies group with 2 updates ([#168](https://github.com/chrischall/hemnet-mcp/issues/168)) ([cf2afa7](https://github.com/chrischall/hemnet-mcp/commit/cf2afa799052e66b1ba881cf4a29ff420f759080))
+
 ## [1.2.0](https://github.com/chrischall/hemnet-mcp/compare/v1.1.15...v1.2.0) (2026-11-04)
 
 
